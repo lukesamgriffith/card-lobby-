@@ -24,7 +24,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
-app.get("/", (_req, res) => res.sendFile(path.join(__dirname, "index.html")));
+app.get("/", (_req, res) => { res.set("Cache-Control", "no-store"); res.sendFile(path.join(__dirname, "index.html")); });
 app.get("/healthz", (_req, res) => res.send("ok"));
 
 /* ---------- card helpers ---------- */
@@ -243,9 +243,11 @@ io.on("connection", (socket) => {
   /* ---- poker ---- */
   socket.on("pokerOn", act((l) => { if (!l.poker || !l.poker.on) l.poker = { on: true, sb: 5, bb: 10, buttonCid: null, hand: null }; }));
   socket.on("pokerOff", act((l) => { l.poker = null; }));
-  socket.on("pokerAddChips", act1((l, p, { amount } = {}) => {
+  socket.on("pokerAddChips", act1((l, p, { amount, pid } = {}) => {
     const a = Math.max(1, Math.min(100000, parseInt(amount, 10) || 0));
-    if (l.poker && l.poker.on) p.chips += a;
+    if (!l.poker || !l.poker.on) return;
+    const target = pid && l.players.has(pid) ? l.players.get(pid) : p;
+    target.chips += a;
   }));
   socket.on("pokerStart", act((l) => { if (l.poker && l.poker.on) poker.startHand(l); }));
   socket.on("pokerAction", act1((l, _p, { action, amount } = {}) => {

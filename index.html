@@ -163,6 +163,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
   let connected = false;  // socket connection status
   let dealN = 2;          // chosen count for "deal several to a player"
   let raiseTo = 0;        // poker raise stepper value
+  let chipAmt = 500;      // chosen amount for the add-chips chooser
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   // stable per-device id so a reconnect restores the same seat + hand
@@ -528,8 +529,13 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
     else if (sheet.kind === "hand") body = T("Your card") + R("playUp", "\uD83C\uDFB4 Play to table, face up") + R("playDown", "\uD83C\uDCA0 Play to table, face down") + R("handDeck", "\u21A9\uFE0F Return to deck");
     else if (sheet.kind === "player") { const p = state.players.find((x) => x.id === sheet.pid); body = T(esc(p ? p.name : "")) + R("dealPlayer", "\u2935\uFE0F Deal a card to " + esc(p ? p.name : "")); }
     else if (sheet.kind === "menu") body = T("Table options") + R("shuffle", "\uD83D\uDD00 Shuffle deck") + R("collect", "\u267B\uFE0F Collect all cards & reshuffle") + R("pokerOn", "\u2660 Start poker mode") + R("leave", "\uD83D\uDEAA Leave table", true);
-    else if (sheet.kind === "pmenu") body = T("Poker table") + R("addchips:100", "\uD83E\uDE99 Add 100 chips") + R("addchips:500", "\uD83E\uDE99 Add 500 chips") + R("addchips:1000", "\uD83E\uDE99 Add 1000 chips") + R("pokerOff", "\u2660 Turn off poker mode") + R("leave", "\uD83D\uDEAA Leave table", true);
-    else if (sheet.kind === "addchips") body = T("Add chips to your stack") + R("addchips:100", "\uD83E\uDE99 100") + R("addchips:500", "\uD83E\uDE99 500") + R("addchips:1000", "\uD83E\uDE99 1000");
+    else if (sheet.kind === "pmenu") body = T("Poker table") + R("openchips", "\uD83E\uDE99 Add chips (any player)") + R("pokerOff", "\u2660 Turn off poker mode") + R("leave", "\uD83D\uDEAA Leave table", true);
+    else if (sheet.kind === "addchips") {
+      const amts = [100, 500, 1000];
+      body = T("Add chips")
+        + '<div class="countrow">' + amts.map((a) => `<button class="countbtn${a === chipAmt ? " on" : ""}" data-row="setchip:${a}">${a}</button>`).join("") + '</div>'
+        + ((state.poker && state.poker.players) || []).map((p) => R("givechips:" + p.id, "\uD83E\uDE99 Give " + chipAmt + " to " + esc(p.name) + (p.me ? " (you)" : ""))).join("");
+    }
 
     let scrim = document.getElementById("scrim");
     if (!scrim) { scrim = document.createElement("div"); scrim.id = "scrim"; scrim.className = "scrim"; document.body.appendChild(scrim); }
@@ -546,6 +552,9 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
     if (act.indexOf("dealNto:") === 0) { emit("dealMany", { pid: act.slice(8), n: dealN }); closeSheet(); render(); return; }
     if (act === "dealMulti") { sheet = { kind: "dealN" }; renderSheet(); return; }
     if (act.indexOf("addchips:") === 0) { emit("pokerAddChips", { amount: parseInt(act.slice(9)) || 100 }); closeSheet(); render(); return; }
+    if (act === "openchips") { sheet = { kind: "addchips" }; renderSheet(); return; }
+    if (act.indexOf("setchip:") === 0) { chipAmt = parseInt(act.slice(8)) || 500; renderSheet(); return; }
+    if (act.indexOf("givechips:") === 0) { emit("pokerAddChips", { amount: chipAmt, pid: act.slice(10) }); closeSheet(); render(); return; }
     const map = {
       shuffle: () => { emit("shuffle"); shuf = true; },
       dealMe: () => emit("dealToMe"),
