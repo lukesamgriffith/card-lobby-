@@ -108,6 +108,14 @@ function pokerView(lobby, cid) {
     v.myTurn = hand.toAct === cid;
     v.legal = v.myTurn ? poker.legalActions(lobby, cid) : null;
     v.results = hand.phase === "done" ? hand.results : null;
+    if ((hand.phase === "showdown" || hand.phase === "muck") && hand.sd) {
+      const sd = hand.sd;
+      v.revealing = true;
+      v.shown = hand.order.filter((c) => sd.shown.has(c)).map((c) => ({
+        id: c, name: lobby.players.get(c).name, hole: hand.inHand[c].hole, hand: poker.handName(sd.scores[c]),
+      }));
+      v.myReveal = hand.phase === "muck" && sd.pendingChoice.has(cid);
+    }
   }
   return v;
 }
@@ -176,11 +184,13 @@ io.on("connection", (socket) => {
   const act = (fn) => () => {
     const lobby = lobbyOf(socket); const p = me();
     if (!lobby || !p) return;
+    lobby.notify = () => broadcast(lobby);
     fn(lobby, p); broadcast(lobby);
   };
   const act1 = (fn) => (arg) => {
     const lobby = lobbyOf(socket); const p = me();
     if (!lobby || !p) return;
+    lobby.notify = () => broadcast(lobby);
     fn(lobby, p, arg); broadcast(lobby);
   };
 
@@ -252,6 +262,9 @@ io.on("connection", (socket) => {
   socket.on("pokerStart", act((l) => { if (l.poker && l.poker.on) poker.startHand(l); }));
   socket.on("pokerAction", act1((l, _p, { action, amount } = {}) => {
     if (l.poker && l.poker.on && l.poker.hand) poker.applyAction(l, socket.data.cid, action, parseInt(amount, 10) || 0);
+  }));
+  socket.on("pokerReveal", act1((l, _p, { show } = {}) => {
+    if (l.poker && l.poker.on && l.poker.hand) poker.applyReveal(l, socket.data.cid, !!show);
   }));
   socket.on("collectAll", act((l) => {
     l.table.forEach((c) => l.deck.push(c.code));

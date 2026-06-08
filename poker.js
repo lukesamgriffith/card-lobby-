@@ -15,6 +15,16 @@
    allows one extra re-raise. Everything else is standard Hold'em.
    ========================================================================= */
 
+// Pacing (ms). Reveal one hand at a time at showdown; run out all-in boards a card at a time.
+const REVEAL_MS = 1500;   // gap between each shown hand at showdown
+const RUNOUT_MS = 1400;   // gap between streets when everyone's all-in
+const PAUSE_MS  = 1700;   // beat after the winning hand before settling the pot
+const MUCK_MS   = 20000;  // auto-muck losers who don't choose in time
+
+// timers fire later, so guard them: bail if a new hand has begun in the meantime
+function alive(lobby, hand) { return lobby.poker && lobby.poker.hand === hand && hand.phase !== "done"; }
+function notify(lobby) { if (typeof lobby.notify === "function") lobby.notify(); }
+
 const SUITS = ["S", "H", "D", "C"];
 const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K"];
 function makeDeck() { const d = []; for (const s of SUITS) for (const r of RANKS) d.push(r + s); return d; }
@@ -124,7 +134,7 @@ function startHand(lobby) {
   const deck = shuffle(makeDeck());
   const inHand = {};
   for (const cid of seats) inHand[cid] = { hole: [deck.pop(), deck.pop()], folded: false, allIn: false, cTotal: 0, cRound: 0 };
-  const hand = { phase: "preflop", deck, community: [], pot: 0, inHand, order: seats, button: bi, currentBet: 0, minRaise: pk.bb, toAct: null, needToAct: new Set(), results: null };
+  const hand = { phase: "preflop", deck, community: [], pot: 0, inHand, order: seats, button: bi, currentBet: 0, minRaise: pk.bb, toAct: null, needToAct: new Set(), results: null, streetAggressor: null, sd: null };
   pk.hand = hand;
 
   let sbPos, bbPos, firstAct;
@@ -199,6 +209,7 @@ function applyAction(lobby, cid, action, amount) {
     if (ph.cRound > hand.currentBet) { // a genuine raise (or all-in over the bet) -> reopen
       hand.minRaise = Math.max(hand.minRaise, ph.cRound - hand.currentBet);
       hand.currentBet = ph.cRound;
+      hand.streetAggressor = cid;
       hand.needToAct = new Set(hand.order.filter((c) => !hand.inHand[c].folded && !hand.inHand[c].allIn));
     }
     hand.needToAct.delete(cid);
@@ -223,56 +234,133 @@ function awardUncontested(lobby) {
 
 function advanceStreet(lobby) {
   const pk = lobby.poker, hand = pk.hand;
-  // reset round
+  // reset the betting round
   for (const cid of hand.order) hand.inHand[cid].cRound = 0;
   hand.currentBet = 0; hand.minRaise = pk.bb;
 
-  const runOut = canActCount(hand) <= 1; // nobody left to bet -> just deal remaining
-  const deal = (k) => { for (let i = 0; i < k; i++) hand.community.push(hand.deck.pop()); };
+  // nobody left who can bet -> run the remaining board out, paced
+  if (canActCount(hand) <= 1) { hand.streetAggressor = null; scheduleRunout(lobby, hand); return; }
 
-  const next = { preflop: "flop", flop: "turn", turn: "river", river: "showdown" }[hand.phase];
-  if (next === "flop") deal(3);
-  else if (next === "turn") deal(1);
-  else if (next === "river") deal(1);
-  hand.phase = next;
+  dealStreet(hand);
+  if (hand.phase === "showdown") return beginShowdown(lobby);
 
-  if (next === "showdown") return showdown(lobby);
-  if (runOut) return advanceStreet(lobby); // keep dealing until showdown
-
+  hand.streetAggressor = null; // fresh betting street
   hand.needToAct = new Set(hand.order.filter((c) => !hand.inHand[c].folded && !hand.inHand[c].allIn));
   hand.toAct = activeFrom(hand, (hand.button + 1) % hand.order.length);
   if (!hand.toAct) advanceStreet(lobby);
 }
 
-function showdown(lobby) {
-  const hand = lobby.poker.hand;
+function dealStreet(hand) {
+  const deal = (k) => { for (let i = 0; i < k; i++) hand.community.push(hand.deck.pop()); };
+  const next = { preflop: "flop", flop: "turn", turn: "river", river: "showdown" }[hand.phase];
+  if (next === "flop") deal(3); else if (next === "turn" || next === "river") deal(1);
+  hand.phase = next;
+}
+
+// Everyone's committed: turn the remaining cards one street at a time so it isn't instant.
+function scheduleRunout(lobby, hand) {
+  setTimeout(() => {
+    if (!alive(lobby, hand)) return;
+    dealStreet(hand);
+    notify(lobby);
+    if (hand.phase === "showdown") beginShowdown(lobby);
+    else scheduleRunout(lobby, hand);
+  }, RUNOUT_MS);
+}
+
+// ---- Showdown: work out winners, then reveal in order with pacing ----
+
+function computeOutcome(lobby, hand) {
   const folded = new Set(hand.order.filter((c) => hand.inHand[c].folded));
   const contribs = {};
   for (const cid of hand.order) contribs[cid] = hand.inHand[cid].cTotal;
   const pots = buildPots(contribs, folded);
-
   const scores = {};
   for (const cid of hand.order) if (!folded.has(cid)) scores[cid] = evaluate7(hand.inHand[cid].hole.concat(hand.community));
 
-  const winMap = {}; // cid -> amount won
+  const winMap = {};
   for (const pot of pots) {
     const elig = pot.eligible.filter((c) => !folded.has(c));
     if (!elig.length) continue;
-    let best = null; let winners = [];
+    let best = null, winners = [];
     for (const c of elig) { const s = scores[c]; const d = best ? cmp(s, best) : 1; if (d > 0) { best = s; winners = [c]; } else if (d === 0) winners.push(c); }
     const share = Math.floor(pot.amount / winners.length);
-    let rem = pot.amount - share * winners.length;
-    // seat order from left of button for odd-chip distribution
+    const rem = pot.amount - share * winners.length;
     const ordered = winners.slice().sort((a, b) => ((hand.order.indexOf(a) - hand.button + 999) % hand.order.length) - ((hand.order.indexOf(b) - hand.button + 999) % hand.order.length));
-    for (const c of ordered) { winMap[c] = (winMap[c] || 0) + share; }
+    for (const c of ordered) winMap[c] = (winMap[c] || 0) + share;
     for (let i = 0; i < rem; i++) winMap[ordered[i]] += 1;
   }
-  for (const [cid, amt] of Object.entries(winMap)) lobby.players.get(cid).chips += amt;
+  return { folded, scores, winMap };
+}
 
-  const shown = hand.order.filter((c) => !folded.has(c)).map((c) => ({ cid: c, name: lobby.players.get(c).name, hole: hand.inHand[c].hole, hand: handName(scores[c]) }));
-  const winners = Object.entries(winMap).map(([cid, amount]) => ({ cid, name: lobby.players.get(cid).name, amount, hand: handName(scores[cid]) }));
+// Reveal order: from the last aggressor (or first seat left of the button if checked down), clockwise.
+function revealOrder(hand, folded) {
+  const n = hand.order.length;
+  const agg = hand.streetAggressor;
+  let start = (agg != null && !folded.has(agg)) ? hand.order.indexOf(agg) : (hand.button + 1) % n;
+  const order = [];
+  for (let k = 0; k < n; k++) { const cid = hand.order[(start + k) % n]; if (!folded.has(cid)) order.push(cid); }
+  return order;
+}
+
+function beginShowdown(lobby) {
+  const hand = lobby.poker.hand;
+  const { folded, scores, winMap } = computeOutcome(lobby, hand);
+  const order = revealOrder(hand, folded);
+
+  // Auto-reveal up to and including the last winner in reveal order; the rest get a choice.
+  let lastWin = -1;
+  order.forEach((c, i) => { if (winMap[c] > 0) lastWin = i; });
+  if (lastWin < 0) lastWin = order.length - 1;
+
+  hand.sd = { folded, scores, winMap, order, autoUpTo: lastWin, pending: order.slice(lastWin + 1), shown: new Set(), pendingChoice: new Set(), muckTimer: null };
+  hand.phase = "showdown";
+  revealStep(lobby, hand, 0);
+}
+
+function revealStep(lobby, hand, i) {
+  if (!alive(lobby, hand)) return;
+  const sd = hand.sd;
+  if (i <= sd.autoUpTo) {
+    sd.shown.add(sd.order[i]);
+    notify(lobby);
+    setTimeout(() => revealStep(lobby, hand, i + 1), REVEAL_MS);
+    return;
+  }
+  // Winner is on the table. Anyone after them may show or muck.
+  if (sd.pending.length) {
+    hand.phase = "muck";
+    sd.pendingChoice = new Set(sd.pending);
+    notify(lobby);
+    sd.muckTimer = setTimeout(() => { if (alive(lobby, hand) && hand.phase === "muck") finalizeShowdown(lobby, hand); }, MUCK_MS);
+  } else {
+    setTimeout(() => { if (alive(lobby, hand)) finalizeShowdown(lobby, hand); }, PAUSE_MS);
+  }
+}
+
+// player after the winner chooses to reveal (show=true) or muck (show=false)
+function applyReveal(lobby, cid, show) {
+  const hand = lobby.poker && lobby.poker.hand;
+  if (!hand || hand.phase !== "muck" || !hand.sd) return { error: "Nothing to reveal." };
+  const sd = hand.sd;
+  if (!sd.pendingChoice.has(cid)) return { error: "Not your choice." };
+  sd.pendingChoice.delete(cid);
+  if (show) sd.shown.add(cid);
+  notify(lobby);
+  if (sd.pendingChoice.size === 0) { clearTimeout(sd.muckTimer); finalizeShowdown(lobby, hand); }
+  return { ok: true };
+}
+
+function finalizeShowdown(lobby, hand) {
+  const sd = hand.sd;
+  for (const [cid, amt] of Object.entries(sd.winMap)) lobby.players.get(cid).chips += amt;
+  const shown = hand.order
+    .filter((c) => sd.shown.has(c))
+    .map((c) => ({ cid: c, name: lobby.players.get(c).name, hole: hand.inHand[c].hole, hand: handName(sd.scores[c]) }));
+  const winners = Object.entries(sd.winMap).map(([cid, amount]) => ({ cid, name: lobby.players.get(cid).name, amount, hand: handName(sd.scores[cid]) }));
   hand.results = { board: hand.community.slice(), winners, shown, uncontested: false };
-  hand.pot = 0; hand.phase = "done"; hand.toAct = null;
+  hand.pot = 0; hand.phase = "done"; hand.toAct = null; hand.sd = null;
+  notify(lobby);
 }
 
 function settleIfDone(lobby) { const h = lobby.poker.hand; if (h && h.phase !== "done" && canActCount(h) <= 1) advanceStreet(lobby); }
@@ -289,4 +377,4 @@ function foldOnLeave(lobby, cid) {
   }
 }
 
-module.exports = { startHand, applyAction, legalActions, foldOnLeave, evaluate7, score5, cmp, handName, buildPots, makeDeck, shuffle };
+module.exports = { startHand, applyAction, applyReveal, legalActions, foldOnLeave, evaluate7, score5, cmp, handName, buildPots, makeDeck, shuffle };

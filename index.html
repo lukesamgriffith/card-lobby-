@@ -1,10 +1,13 @@
 <!DOCTYPE html>
-<html lang="en"><head>
-<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" /><meta name="theme-color" content="#0e3b2b" />
-<title>Card Lobby</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
-<style>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0e3b2b" />
+  <title>Card Lobby</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; }
 html, body, #app { height: 100%; }
 body { font-family: 'Outfit', system-ui, sans-serif; color: #f3ead4;
@@ -129,10 +132,27 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
 .pbtn.call { background:linear-gradient(180deg,#e6c068,#cf9f3f); color:#3a2a06; border-color:#e6c068; }
 .pbtn.allin { color:#ffd9a0; }
 .pbtn.add { background:transparent; color:#9fc0ad; border-color:rgba(159,192,173,.4); }
-.raisebox { display:flex; align-items:center; gap:6px; background:rgba(0,0,0,.25); border-radius:11px; padding:3px; }
-.pbtn.step { padding:10px 13px; }
-.ramt { min-width:46px; text-align:center; font-weight:700; color:#fff5dd; }
-.pbtn.raise { background:rgba(217,179,92,.22); border-color:#d9b35c; }
+.actrow { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; width:100%; }
+.raisebox { width:100%; max-width:420px; background:rgba(0,0,0,.28); border:1px solid rgba(217,179,92,.25); border-radius:14px; padding:11px 13px; display:flex; flex-direction:column; gap:9px; }
+.rtop { display:flex; justify-content:space-between; align-items:baseline; }
+.rlabel { font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:#9fc0ad; }
+.ramt { font-family:'Fraunces',serif; font-size:22px; font-weight:600; color:#fff5dd; }
+.rslider { -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:6px; background:linear-gradient(90deg,#cf9f3f,#e6c068); outline:none; margin:2px 0; }
+.rslider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:26px; height:26px; border-radius:50%; background:#fff5dd; border:2px solid #cf9f3f; box-shadow:0 1px 4px rgba(0,0,0,.4); cursor:pointer; }
+.rslider::-moz-range-thumb { width:26px; height:26px; border-radius:50%; background:#fff5dd; border:2px solid #cf9f3f; cursor:pointer; }
+.rpresets { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.rpreset { flex:1; min-width:54px; padding:9px 6px; border-radius:9px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05); color:#f3ead4; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; }
+.pbtn.raise { background:linear-gradient(180deg,#e6c068,#cf9f3f); color:#3a2a06; border-color:#e6c068; flex:1.4; min-width:120px; }
+
+/* showdown reveal */
+.pcenter.showdown { width:100%; }
+.showlist { display:flex; flex-direction:column; gap:7px; width:100%; max-width:380px; }
+.showrow { display:flex; align-items:center; gap:9px; background:rgba(0,0,0,.22); border-radius:10px; padding:6px 10px; animation:rise .25s ease; }
+.sn { font-weight:600; color:#fff5dd; flex:1; text-align:left; font-size:13.5px; }
+.scards { display:flex; gap:3px; }
+.scard { width:30px; height:42px; }
+.scard .face, .scard .back { width:100%; height:100%; }
+.shand { font-size:12px; color:#9fc0ad; min-width:96px; text-align:right; }
 
 /* sheet / toast */
 .scrim { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:flex-end; justify-content:center; z-index:50; }
@@ -143,10 +163,12 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
 .row { display:block; width:100%; text-align:left; padding:15px 16px; border-radius:13px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.07); color:#f3ead4; font-family:inherit; font-size:15.5px; cursor:pointer; margin-bottom:9px; }
 .row.danger { color:#ffb4ab; }
 .toast { position:fixed; top:18px; left:50%; transform:translateX(-50%); z-index:60; background:rgba(8,41,30,.95); border:1px solid #d9b35c; color:#fff5dd; padding:10px 18px; border-radius:30px; font-size:13.5px; }
-</style></head><body>
-<div id="app"></div>
-<script src="/socket.io/socket.io.js"></script>
-<script>
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
 /* Card Lobby — client. The server is authoritative; we render whatever
    `state` it sends and emit intents on tap. */
 (function () {
@@ -162,7 +184,8 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
   let dragging = false;   // true while this client is dragging a table card
   let connected = false;  // socket connection status
   let dealN = 2;          // chosen count for "deal several to a player"
-  let raiseTo = 0;        // poker raise stepper value
+  let raiseTo = 0;        // poker raise slider value
+  let lastTurnKey = null; // resets the raise slider to the minimum each new turn
   let chipAmt = 500;      // chosen amount for the add-chips chooser
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -430,12 +453,20 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
   }
 
   /* ---------------- poker mode UI ---------------- */
+  function showHandsHtml(list) {
+    return (list || []).map((s) => `<div class="showrow"><span class="sn">${esc(s.name)}</span><span class="scards">${(s.hole || []).map((c) => `<span class="scard">${cardInner(c, true)}</span>`).join("")}</span>${s.hand ? `<span class="shand">${s.hand}</span>` : ""}</div>`).join("");
+  }
   function pokerCenter(pk) {
+    if (pk.revealing) {
+      const rows = showHandsHtml(pk.shown);
+      const prompt = pk.myReveal ? '<div class="hint">Your turn \u2014 show or muck below</div>' : '<div class="hint">Showdown\u2026</div>';
+      return `<div class="pcenter showdown"><div class="showlist">${rows}</div>${prompt}</div>`;
+    }
     if (pk.results) {
       const r = pk.results;
       const win = r.winners.map((w) => esc(w.name) + " +" + w.amount + (w.hand ? " (" + w.hand + ")" : "")).join(", ");
-      const shown = (r.shown || []).filter(s => s.hand).map((s) => esc(s.name) + ": " + s.hand).join(" \u00b7 ");
-      return `<div class="pcenter"><div class="result">\uD83C\uDFC6 ${win}</div>${shown ? `<div class="showns">${shown}</div>` : ""}${pk.canStart ? '<button class="btn primary" id="deal">Deal next hand</button>' : '<div class="hint">Need 2+ players with chips</div>'}</div>`;
+      const shown = r.uncontested ? "" : showHandsHtml(r.shown);
+      return `<div class="pcenter"><div class="result">\uD83C\uDFC6 ${win}</div>${shown ? `<div class="showlist">${shown}</div>` : ""}${pk.canStart ? '<button class="btn primary" id="deal">Deal next hand</button>' : '<div class="hint">Need 2+ players with chips</div>'}</div>`;
     }
     if (!pk.handLive) return `<div class="pcenter">${pk.canStart ? '<button class="btn primary" id="deal">Deal hand</button>' : '<div class="hint">Add chips, then deal \u2014 needs 2+ players</div>'}</div>`;
     const turn = (pk.players.find((p) => p.isTurn) || {}).name;
@@ -443,23 +474,48 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
   }
   function actionBar(pk) {
     const add = '<button class="pbtn add" id="addchips">\uFF0B Add chips</button>';
+    if (pk.myReveal) {
+      return `<div class="actionbar"><button class="pbtn call" id="showhand">Show hand</button><button class="pbtn fold" id="muck">Muck</button></div>`;
+    }
     if (pk.myTurn && pk.legal) {
       const L = pk.legal;
-      if (raiseTo < L.minRaiseTo) raiseTo = L.minRaiseTo;
-      if (raiseTo > L.maxRaiseTo) raiseTo = L.maxRaiseTo;
       const callLabel = L.canCheck ? "Check" : (L.canCall ? "Call " + L.toCall : "Call");
       const canRaise = L.canRaise && L.maxRaiseTo >= L.minRaiseTo;
+      const bb = pk.bb || 10;
+      const slider = canRaise ? `
+        <div class="raisebox">
+          <div class="rtop"><span class="rlabel">Raise to</span><span class="ramt" id="ramt">${raiseTo}</span></div>
+          <input type="range" class="rslider" id="rslider" min="${L.minRaiseTo}" max="${L.maxRaiseTo}" step="${bb}" value="${raiseTo}">
+          <div class="rpresets">
+            <button class="rpreset" data-rp="min">Min</button>
+            <button class="rpreset" data-rp="half">\u00BD Pot</button>
+            <button class="rpreset" data-rp="pot">Pot</button>
+            <button class="rpreset" data-rp="max">Max</button>
+            <button class="pbtn raise" id="raise">Raise to ${raiseTo}</button>
+          </div>
+        </div>` : "";
       return `<div class="actionbar">
-        <button class="pbtn fold" id="fold">Fold</button>
-        <button class="pbtn call" id="callcheck">${callLabel}</button>
-        ${canRaise ? `<div class="raisebox"><button class="pbtn step" id="rminus">\u2212</button><span class="ramt">${raiseTo}</span><button class="pbtn step" id="rplus">\uFF0B</button><button class="pbtn raise" id="raise">Raise</button></div>` : ""}
-        <button class="pbtn allin" id="allin">All-in</button>
+        <div class="actrow">
+          <button class="pbtn fold" id="fold">Fold</button>
+          <button class="pbtn call" id="callcheck">${callLabel}</button>
+          <button class="pbtn allin" id="allin">All-in</button>
+        </div>
+        ${slider}
       </div>${add}`;
     }
     return `<div class="actionbar idle">${pk.handLive ? '<span class="hint">Waiting\u2026</span>' : ""}${add}</div>`;
   }
   function renderPoker() {
     const pk = state.poker;
+    // Start the raise slider at the minimum each new turn; keep the value while it's still my decision.
+    if (pk.myTurn && pk.legal) {
+      const key = pk.phase + ":" + pk.currentBet + ":" + pk.toAct;
+      if (key !== lastTurnKey) { raiseTo = pk.legal.minRaiseTo; lastTurnKey = key; }
+      if (raiseTo < pk.legal.minRaiseTo) raiseTo = pk.legal.minRaiseTo;
+      if (raiseTo > pk.legal.maxRaiseTo) raiseTo = pk.legal.maxRaiseTo;
+    } else {
+      lastTurnKey = null;
+    }
     app.innerHTML = `
     <div class="table">
       <header class="top">
@@ -492,7 +548,6 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
       </div>
     </div>`;
 
-    const step = pk.bb || 10;
     const $ = (id) => document.getElementById(id);
     $("codebox").onclick = () => { navigator.clipboard && navigator.clipboard.writeText(state.code); toast("Code copied"); };
     $("menu").onclick = () => { sheet = { kind: "pmenu" }; renderSheet(); };
@@ -502,8 +557,28 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
     if ($("callcheck")) $("callcheck").onclick = () => emit("pokerAction", { action: pk.legal.canCheck ? "check" : "call" });
     if ($("allin")) $("allin").onclick = () => emit("pokerAction", { action: "allin" });
     if ($("raise")) $("raise").onclick = () => emit("pokerAction", { action: "raise", amount: raiseTo });
-    if ($("rminus")) $("rminus").onclick = () => { raiseTo = Math.max(pk.legal.minRaiseTo, raiseTo - step); renderPoker(); };
-    if ($("rplus")) $("rplus").onclick = () => { raiseTo = Math.min(pk.legal.maxRaiseTo, raiseTo + step); renderPoker(); };
+    if ($("showhand")) $("showhand").onclick = () => emit("pokerReveal", { show: true });
+    if ($("muck")) $("muck").onclick = () => emit("pokerReveal", { show: false });
+    const sl = $("rslider");
+    if (sl) {
+      const L = pk.legal, bb = pk.bb || 10;
+      const clampBB = (x) => Math.max(L.minRaiseTo, Math.min(L.maxRaiseTo, Math.round(x / bb) * bb));
+      const setVal = (v) => {
+        raiseTo = clampBB(v); sl.value = raiseTo;
+        const a = $("ramt"); if (a) a.textContent = raiseTo;
+        const rb = $("raise"); if (rb) rb.textContent = "Raise to " + raiseTo;
+      };
+      sl.oninput = () => setVal(parseInt(sl.value, 10) || L.minRaiseTo);
+      document.querySelectorAll(".rpreset").forEach((b) => {
+        b.onclick = () => {
+          const rp = b.getAttribute("data-rp");
+          if (rp === "min") setVal(L.minRaiseTo);
+          else if (rp === "max") setVal(L.maxRaiseTo);
+          else if (rp === "pot") setVal(pk.currentBet + pk.pot);
+          else if (rp === "half") setVal(pk.currentBet + Math.round(pk.pot / 2));
+        };
+      });
+    }
   }
 
   function renderSheet() {
@@ -588,4 +663,6 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
   window.addEventListener("resize", () => { if (me && state && !dragging) layoutHand(); });
   render();
 })();
-</script></body></html>
+  </script>
+</body>
+</html>
