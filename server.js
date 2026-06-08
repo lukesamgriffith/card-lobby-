@@ -164,6 +164,13 @@ io.on("connection", (socket) => {
   socket.on("dealToPlayer", act1((l, _p, { pid } = {}) => {
     if (l.deck.length && l.players.has(pid)) l.players.get(pid).hand.push(l.deck.shift());
   }));
+  socket.on("dealRound", act((l) => {
+    for (const cid of l.order) {
+      if (!l.deck.length) break;
+      const p = l.players.get(cid);
+      if (p) p.hand.push(l.deck.shift());
+    }
+  }));
   socket.on("flip", act1((l, _p, { id } = {}) => {
     const c = l.table.find((t) => t.id === id);
     if (c) { c.faceUp = !c.faceUp; if (c.faceUp) c.peekedBy = null; }
@@ -180,13 +187,24 @@ io.on("connection", (socket) => {
     const i = l.table.findIndex((t) => t.id === id);
     if (i >= 0) l.deck.push(l.table.splice(i, 1)[0].code);
   }));
-  socket.on("playFromHand", act1((l, p, { code, faceUp } = {}) => {
+  socket.on("playFromHand", act1((l, p, { code, faceUp, x, y } = {}) => {
     const i = p.hand.indexOf(code);
-    if (i >= 0) { p.hand.splice(i, 1); l.table.push({ id: genId(), code, faceUp: !!faceUp, peekedBy: null, ...placeOnTable(l) }); }
+    if (i < 0) return;
+    p.hand.splice(i, 1);
+    const pos = (typeof x === "number" && typeof y === "number")
+      ? { x: Math.min(0.97, Math.max(0.03, x)), y: Math.min(0.94, Math.max(0.06, y)), z: (l.maxZ = (l.maxZ || 0) + 1) }
+      : placeOnTable(l);
+    l.table.push({ id: genId(), code, faceUp: !!faceUp, peekedBy: null, ...pos });
   }));
   socket.on("handToDeck", act1((l, p, { code } = {}) => {
     const i = p.hand.indexOf(code);
     if (i >= 0) l.deck.push(p.hand.splice(i, 1)[0]);
+  }));
+  socket.on("reorderHand", act1((l, p, { order } = {}) => {
+    if (!Array.isArray(order)) return;
+    const cur = p.hand.slice().sort().join(",");
+    const next = order.slice().sort().join(",");
+    if (cur === next) p.hand = order.slice(); // accept only a true permutation of the current hand
   }));
   socket.on("collectAll", act((l) => {
     l.table.forEach((c) => l.deck.push(c.code));
