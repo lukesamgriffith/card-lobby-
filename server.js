@@ -3,8 +3,15 @@
 
    The server holds the one true copy of every lobby's state. Because it
    decides what each client receives, hidden information is genuinely hidden:
-   a player's hand is only ever sent to that player's own socket, and a
-   face-down table card's value is sent only to whoever is peeking it.
+   a hand is only ever sent to its owner's socket, and a face-down card's
+   value only to whoever is peeking it.
+
+   Players are keyed by a stable clientId (sent by the browser and kept in
+   localStorage), NOT by socket id. So a dropped connection — phone locking,
+   a tab backgrounding, a flaky network — does not destroy your seat: you are
+   marked "away", and rejoining with the same clientId restores your hand.
+   Lobbies survive a grace period while empty so a second device can still
+   join after the creator's tab briefly slept.
    ========================================================================= */
 
 const express = require("express");
@@ -46,17 +53,19 @@ function genCode() {
 function genId() {
   return Math.random().toString(36).slice(2, 10);
 }
-// assign a position (fractions of the table) + stacking order to a card landing on the table
 function placeOnTable(lobby) {
   lobby.maxZ = (lobby.maxZ || 0) + 1;
   return { x: 0.5 + (Math.random() - 0.5) * 0.28, y: 0.42 + (Math.random() - 0.5) * 0.26, z: lobby.maxZ };
 }
 
-/* ---------- state ---------- */
-/** code -> { code, deck:[], table:[{id,code,faceUp,peekedBy}], players:Map<sid,{name,hand:[]}>, order:[sid] } */
+/* ---------- state ----------
+   lobby.players: Map<clientId, { name, hand:[], connected:bool, sockId:string|null }>
+   lobby.order:   [clientId]   (seat order)
+*/
 const lobbies = new Map();
+const GRACE_MS = 3 * 60 * 1000; // keep a dropped player's seat (and an empty lobby) this long
 
-function buildView(lobby, sid) {
+function buildView(lobby, cid) {
   return {
     code: lobby.code,
     deckCount: lobby.deck.length,
@@ -64,110 +73,121 @@ function buildView(lobby, sid) {
       id: c.id,
       faceUp: c.faceUp,
       x: c.x, y: c.y, z: c.z,
-      // value revealed only when face up, or to the peeker themselves
-      code: c.faceUp ? c.code : c.peekedBy === sid ? c.code : null,
+      code: c.faceUp ? c.code : c.peekedBy === cid ? c.code : null, // value only if face up or you're the peeker
       peekedByName: c.peekedBy && lobby.players.has(c.peekedBy) ? lobby.players.get(c.peekedBy).name : null,
-      peekedByMe: c.peekedBy === sid,
+      peekedByMe: c.peekedBy === cid,
     })),
     players: lobby.order
       .filter((id) => lobby.players.has(id))
-      .map((id) => ({ id, name: lobby.players.get(id).name, count: lobby.players.get(id).hand.length, me: id === sid })),
-    myHand: lobby.players.get(sid) ? lobby.players.get(sid).hand : [],
+      .map((id) => ({ id, name: lobby.players.get(id).name, count: lobby.players.get(id).hand.length, me: id === cid, away: !lobby.players.get(id).connected })),
+    myHand: lobby.players.get(cid) ? lobby.players.get(cid).hand : [],
   };
 }
 function broadcast(lobby) {
-  for (const sid of lobby.players.keys()) io.to(sid).emit("state", buildView(lobby, sid));
+  for (const p of lobby.players.values()) {
+    if (p.connected && p.sockId) io.to(p.sockId).emit("state", buildView(lobby, p._cid));
+  }
 }
 function lobbyOf(socket) {
   const code = socket.data.code;
   return code ? lobbies.get(code) : null;
 }
-function cleanupIfEmpty(lobby) {
-  if (lobby && lobby.players.size === 0) lobbies.delete(lobby.code);
+
+/* remove a player for good (explicit leave, or grace expired): return their cards, drop the seat */
+function purgePlayer(lobby, cid) {
+  const p = lobby.players.get(cid);
+  if (!p) return;
+  lobby.deck.push(...p.hand);
+  lobby.players.delete(cid);
+  lobby.order = lobby.order.filter((id) => id !== cid);
+  lobby.table.forEach((c) => { if (c.peekedBy === cid) c.peekedBy = null; });
+  if (lobby.players.size === 0) lobbies.delete(lobby.code);
+  else broadcast(lobby);
 }
 
 /* ---------- socket handlers ---------- */
 io.on("connection", (socket) => {
-  socket.on("create", ({ name } = {}, cb) => {
+  // attach a player to a lobby, creating their seat or reattaching an existing one (reconnect)
+  function attach(lobby, cid, name) {
+    let p = lobby.players.get(cid);
+    if (p) {
+      p.connected = true; p.sockId = socket.id;
+      if (name) p.name = name.slice(0, 16);
+    } else {
+      p = { name: (name || "Player").slice(0, 16), hand: [], connected: true, sockId: socket.id, _cid: cid };
+      lobby.players.set(cid, p);
+      lobby.order.push(cid);
+    }
+    p._cid = cid;
+    socket.data.cid = cid;
+    socket.data.code = lobby.code;
+    socket.join(lobby.code);
+  }
+
+  socket.on("create", ({ name, clientId } = {}, cb) => {
+    const cid = clientId || genId();
     const code = genCode();
     const lobby = { code, deck: makeDeck(), table: [], players: new Map(), order: [], maxZ: 0 };
-    lobby.players.set(socket.id, { name: (name || "Player").slice(0, 16), hand: [] });
-    lobby.order.push(socket.id);
     lobbies.set(code, lobby);
-    socket.data.code = code;
-    socket.join(code);
+    attach(lobby, cid, name);
     if (cb) cb({ ok: true, code });
     broadcast(lobby);
   });
 
-  socket.on("join", ({ code, name } = {}, cb) => {
+  // join doubles as reconnect: same clientId => same seat, hand preserved
+  socket.on("join", ({ code, name, clientId } = {}, cb) => {
     const c = (code || "").trim().toUpperCase();
     const lobby = lobbies.get(c);
     if (!lobby) return cb && cb({ ok: false, error: "No lobby found with that code." });
-    lobby.players.set(socket.id, { name: (name || "Player").slice(0, 16), hand: [] });
-    lobby.order.push(socket.id);
-    socket.data.code = c;
-    socket.join(c);
+    attach(lobby, clientId || genId(), name);
     if (cb) cb({ ok: true, code: c });
     broadcast(lobby);
   });
 
-  /* a tiny helper so each action mutates then re-broadcasts */
+  const me = () => { const l = lobbyOf(socket); return l ? l.players.get(socket.data.cid) : null; };
   const act = (fn) => () => {
-    const lobby = lobbyOf(socket);
-    if (!lobby || !lobby.players.has(socket.id)) return;
-    fn(lobby, lobby.players.get(socket.id));
-    broadcast(lobby);
+    const lobby = lobbyOf(socket); const p = me();
+    if (!lobby || !p) return;
+    fn(lobby, p); broadcast(lobby);
   };
   const act1 = (fn) => (arg) => {
-    const lobby = lobbyOf(socket);
-    if (!lobby || !lobby.players.has(socket.id)) return;
-    fn(lobby, lobby.players.get(socket.id), arg);
-    broadcast(lobby);
+    const lobby = lobbyOf(socket); const p = me();
+    if (!lobby || !p) return;
+    fn(lobby, p, arg); broadcast(lobby);
   };
 
   socket.on("shuffle", act((l) => { l.deck = shuffle(l.deck); }));
-
-  socket.on("dealToMe", act((l, me) => { if (l.deck.length) me.hand.push(l.deck.shift()); }));
-
+  socket.on("dealToMe", act((l, p) => { if (l.deck.length) p.hand.push(l.deck.shift()); }));
   socket.on("dealToTable", act((l) => {
     if (l.deck.length) l.table.push({ id: genId(), code: l.deck.shift(), faceUp: false, peekedBy: null, ...placeOnTable(l) });
   }));
-
-  socket.on("dealToPlayer", act1((l, _me, { pid } = {}) => {
+  socket.on("dealToPlayer", act1((l, _p, { pid } = {}) => {
     if (l.deck.length && l.players.has(pid)) l.players.get(pid).hand.push(l.deck.shift());
   }));
-
-  socket.on("flip", act1((l, _me, { id } = {}) => {
+  socket.on("flip", act1((l, _p, { id } = {}) => {
     const c = l.table.find((t) => t.id === id);
     if (c) { c.faceUp = !c.faceUp; if (c.faceUp) c.peekedBy = null; }
   }));
-
-  socket.on("peek", act1((l, _me, { id } = {}) => {
+  socket.on("peek", act1((l, _p, { id } = {}) => {
     const c = l.table.find((t) => t.id === id);
-    if (c && !c.faceUp) c.peekedBy = c.peekedBy === socket.id ? null : socket.id;
+    if (c && !c.faceUp) c.peekedBy = c.peekedBy === socket.data.cid ? null : socket.data.cid;
   }));
-
-  socket.on("takeFromTable", act1((l, me, { id } = {}) => {
+  socket.on("takeFromTable", act1((l, p, { id } = {}) => {
     const i = l.table.findIndex((t) => t.id === id);
-    if (i >= 0) me.hand.push(l.table.splice(i, 1)[0].code);
+    if (i >= 0) p.hand.push(l.table.splice(i, 1)[0].code);
   }));
-
-  socket.on("tableToDeck", act1((l, _me, { id } = {}) => {
+  socket.on("tableToDeck", act1((l, _p, { id } = {}) => {
     const i = l.table.findIndex((t) => t.id === id);
     if (i >= 0) l.deck.push(l.table.splice(i, 1)[0].code);
   }));
-
-  socket.on("playFromHand", act1((l, me, { code, faceUp } = {}) => {
-    const i = me.hand.indexOf(code);
-    if (i >= 0) { me.hand.splice(i, 1); l.table.push({ id: genId(), code, faceUp: !!faceUp, peekedBy: null, ...placeOnTable(l) }); }
+  socket.on("playFromHand", act1((l, p, { code, faceUp } = {}) => {
+    const i = p.hand.indexOf(code);
+    if (i >= 0) { p.hand.splice(i, 1); l.table.push({ id: genId(), code, faceUp: !!faceUp, peekedBy: null, ...placeOnTable(l) }); }
   }));
-
-  socket.on("handToDeck", act1((l, me, { code } = {}) => {
-    const i = me.hand.indexOf(code);
-    if (i >= 0) l.deck.push(me.hand.splice(i, 1)[0]);
+  socket.on("handToDeck", act1((l, p, { code } = {}) => {
+    const i = p.hand.indexOf(code);
+    if (i >= 0) l.deck.push(p.hand.splice(i, 1)[0]);
   }));
-
   socket.on("collectAll", act((l) => {
     l.table.forEach((c) => l.deck.push(c.code));
     for (const p of l.players.values()) { l.deck.push(...p.hand); p.hand = []; }
@@ -175,7 +195,6 @@ io.on("connection", (socket) => {
     l.deck = shuffle(l.deck);
   }));
 
-  // live drag: relay position to the OTHERS in the room only (no z change, no heavy full rebroadcast)
   socket.on("dragMove", ({ id, x, y } = {}) => {
     const lobby = lobbyOf(socket);
     if (!lobby) return;
@@ -184,7 +203,6 @@ io.on("connection", (socket) => {
     c.x = x; c.y = y;
     socket.to(lobby.code).emit("cardMoved", { id, x, y });
   });
-  // drop: finalize position, bring to the top of the stack, full reconcile for everyone
   socket.on("dropCard", ({ id, x, y } = {}) => {
     const lobby = lobbyOf(socket);
     if (!lobby) return;
@@ -194,21 +212,28 @@ io.on("connection", (socket) => {
     broadcast(lobby);
   });
 
-  function removeFromLobby() {
-    const lobby = lobbyOf(socket);
-    if (!lobby) return;
-    const me = lobby.players.get(socket.id);
-    if (me) lobby.deck.push(...me.hand); // return cards to deck
-    lobby.players.delete(socket.id);
-    lobby.order = lobby.order.filter((id) => id !== socket.id);
-    lobby.table.forEach((c) => { if (c.peekedBy === socket.id) c.peekedBy = null; });
-    socket.data.code = null;
-    if (lobby.players.size === 0) cleanupIfEmpty(lobby);
-    else broadcast(lobby);
-  }
+  // explicit leave: gone immediately
+  socket.on("leave", () => {
+    const lobby = lobbyOf(socket); const cid = socket.data.cid;
+    socket.data.code = null; socket.data.cid = null;
+    if (lobby && cid) purgePlayer(lobby, cid);
+  });
 
-  socket.on("leave", () => { removeFromLobby(); });
-  socket.on("disconnect", () => { removeFromLobby(); });
+  // accidental drop: keep the seat, mark away, purge only if still gone after the grace period
+  socket.on("disconnect", () => {
+    const lobby = lobbyOf(socket); const cid = socket.data.cid;
+    if (!lobby || !cid) return;
+    const p = lobby.players.get(cid);
+    if (!p || p.sockId !== socket.id) return; // a newer socket already took over this seat
+    p.connected = false; p.sockId = null;
+    broadcast(lobby);
+    setTimeout(() => {
+      const lb = lobbies.get(lobby.code);
+      if (!lb) return;
+      const pp = lb.players.get(cid);
+      if (pp && !pp.connected) purgePlayer(lb, cid); // still away after grace -> remove
+    }, GRACE_MS);
+  });
 });
 
 const PORT = process.env.PORT || 3000;

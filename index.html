@@ -48,6 +48,8 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
 .players { display:flex; gap:8px; padding:4px 16px 10px; flex-wrap:wrap; }
 .waiting { color:#7fa691; font-size:13px; padding:4px 2px; }
 .pchip { display:flex; align-items:center; gap:7px; background:rgba(0,0,0,.24); border:1px solid rgba(255,255,255,.09); border-radius:20px; padding:7px 12px; color:#eadfc4; font-size:13px; font-family:inherit; cursor:pointer; }
+.pchip.away { opacity:.45; }
+.pchip.away .pdot { background:#8a8a8a; box-shadow:none; }
 .pdot { width:7px; height:7px; border-radius:50%; background:#6fd39a; box-shadow:0 0 6px #6fd39a; }
 .pname { font-weight:600; } .pcount { color:#bca; font-size:12px; }
 .felt { flex:1; display:flex; flex-direction:column; align-items:center; gap:14px; padding:10px 14px; }
@@ -120,8 +122,29 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
   let connected = false;  // socket connection status
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+  // stable per-device id so a reconnect restores the same seat + hand
+  const clientId = (() => {
+    try {
+      let c = localStorage.getItem("cl_cid");
+      if (!c) { c = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem("cl_cid", c); }
+      return c;
+    } catch (_) { return Math.random().toString(36).slice(2); }
+  })();
+  function saveMe() { try { me ? localStorage.setItem("cl_me", JSON.stringify(me)) : localStorage.removeItem("cl_me"); } catch (_) {} }
+  function loadMe() { try { const r = localStorage.getItem("cl_me"); return r ? JSON.parse(r) : null; } catch (_) { return null; } }
+  me = loadMe(); // resume a table across reloads / app switches
+
   /* ---- socket ---- */
-  socket.on("connect", () => { connected = true; if (!me) renderHome(); });
+  // (re)connecting: if we were in a lobby, rejoin it (same clientId => same seat). Otherwise show home.
+  socket.on("connect", () => {
+    connected = true;
+    if (me && me.code) {
+      emit("join", { code: me.code, name: me.name, clientId }, (r) => {
+        if (r && r.ok) render();
+        else { me = null; saveMe(); renderHome(); }
+      });
+    } else renderHome();
+  });
   socket.on("disconnect", () => { connected = false; if (!me) renderHome(); });
   socket.on("connect_error", () => { connected = false; if (!me) renderHome(); }); // free server may be waking
   socket.on("state", (s) => { state = s; if (dragging) return; render(); }); // don't yank a card mid-drag
@@ -186,13 +209,13 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
     const nameEl = document.getElementById("name");
     nameEl.oninput = () => (renderHome._name = nameEl.value);
     const need = () => { const n = (renderHome._name || "").trim(); if (!n) { renderHome(false); toast("Enter a name first"); } return n; };
-    if (document.getElementById("create")) document.getElementById("create").onclick = () => { const n = need(); if (n) emit("create", { name: n }, (r) => { if (r && r.ok) { me = { name: n, code: r.code }; render(); } }); };
+    if (document.getElementById("create")) document.getElementById("create").onclick = () => { const n = need(); if (n) emit("create", { name: n, clientId }, (r) => { if (r && r.ok) { me = { name: n, code: r.code }; saveMe(); render(); } }); };
     if (document.getElementById("dojoinmode")) document.getElementById("dojoinmode").onclick = () => { if (need()) { renderHome._mode = "join"; renderHome(); } };
     if (document.getElementById("back")) document.getElementById("back").onclick = () => { renderHome._mode = null; renderHome(); };
     if (document.getElementById("code")) document.getElementById("code").oninput = (e) => (e.target.value = e.target.value.toUpperCase());
     if (document.getElementById("dojoin")) document.getElementById("dojoin").onclick = () => {
       const n = need(); const c = (document.getElementById("code").value || "").trim();
-      if (n && c.length >= 4) emit("join", { name: n, code: c }, (r) => { if (r && r.ok) { me = { name: n, code: r.code }; render(); } else renderHome(r && r.error); });
+      if (n && c.length >= 4) emit("join", { name: n, code: c, clientId }, (r) => { if (r && r.ok) { me = { name: n, code: r.code }; saveMe(); render(); } else renderHome(r && r.error); });
     };
   }
 
@@ -211,7 +234,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
       </header>
       <div class="players">
         ${others.length === 0 ? '<div class="waiting">Waiting for friends to join\u2026</div>' : ""}
-        ${others.map((p) => `<button class="pchip" data-act="player" data-id="${p.id}"><span class="pdot"></span><span class="pname">${esc(p.name)}</span><span class="pcount">\uD83C\uDCA0 ${p.count}</span></button>`).join("")}
+        ${others.map((p) => `<button class="pchip${p.away ? " away" : ""}" data-act="player" data-id="${p.id}"><span class="pdot"></span><span class="pname">${esc(p.name)}</span><span class="pcount">\uD83C\uDCA0 ${p.count}</span></button>`).join("")}
       </div>
       <div class="felt">
         <div class="deck${shuf ? " shuf" : ""}" id="deck"><div class="deckstack"><span class="deckcount">${state.deckCount}</span></div><span class="decklabel">DECK</span></div>
@@ -322,7 +345,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
       playDown: () => emit("playFromHand", { code, faceUp: false }),
       handDeck: () => emit("handToDeck", { code }),
       collect: () => { emit("collectAll"); shuf = true; },
-      leave: () => { emit("leave"); me = null; state = null; },
+      leave: () => { emit("leave"); me = null; saveMe(); state = null; },
     };
     (map[act] || (() => {}))();
     closeSheet();
