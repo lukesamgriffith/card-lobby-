@@ -117,11 +117,14 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
   let sheet = null;       // open action sheet
   let shuf = false;
   let dragging = false;   // true while this client is dragging a table card
+  let connected = false;  // socket connection status
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   /* ---- socket ---- */
+  socket.on("connect", () => { connected = true; if (!me) renderHome(); });
+  socket.on("disconnect", () => { connected = false; if (!me) renderHome(); });
+  socket.on("connect_error", () => { connected = false; if (!me) renderHome(); }); // free server may be waking
   socket.on("state", (s) => { state = s; if (dragging) return; render(); }); // don't yank a card mid-drag
-  socket.on("connect_error", () => toast("Connection lost\u2026 retrying"));
   // lightweight live position from another player's drag — patch just that card, no full re-render
   socket.on("cardMoved", ({ id, x, y } = {}) => {
     if (state) { const c = state.table.find((t) => t.id === id); if (c) { c.x = x; c.y = y; } }
@@ -129,7 +132,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
     if (el) { el.style.left = x * 100 + "%"; el.style.top = y * 100 + "%"; }
   });
 
-  function emit(ev, arg) { socket.emit(ev, arg); }
+  function emit(ev, ...rest) { socket.emit(ev, ...rest); } // pass through ack callbacks too
 
   /* ---- card markup ---- */
   function cardInner(code, show) {
@@ -170,12 +173,14 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
       ${joining ? `
         <label class="label">Lobby code</label>
         <input class="input code-in" id="code" maxlength="6" placeholder="ABC123" />
-        <button class="btn primary" id="dojoin">Join table</button>
+        <button class="btn primary" id="dojoin"${connected ? "" : " disabled"}>Join table</button>
         <button class="btn ghost" id="back">Back</button>` : `
-        <button class="btn primary" id="create">Create a table</button>
-        <button class="btn outline" id="dojoinmode">Join with a code</button>`}
+        <button class="btn primary" id="create"${connected ? "" : " disabled"}>Create a table</button>
+        <button class="btn outline" id="dojoinmode"${connected ? "" : " disabled"}>Join with a code</button>`}
       ${err ? `<div class="err">${esc(err)}</div>` : ""}
-      <p class="foot">Share this site's link, then friends enter your code.</p>
+      ${connected
+        ? '<p class="foot">Share this site\u2019s link, then friends enter your code.</p>'
+        : '<p class="foot">Connecting to the server\u2026 the first wake-up can take up to a minute on the free plan.</p>'}
     </div></div>`;
 
     const nameEl = document.getElementById("name");
