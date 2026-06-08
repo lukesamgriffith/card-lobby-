@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0e3b2b" />
+  <title>Card Lobby</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; }
+html, body, #app { height: 100%; }
+body { font-family: 'Outfit', system-ui, sans-serif; color: #f3ead4;
+  background: radial-gradient(120% 90% at 50% -10%, #16523c 0%, #0e3b2b 45%, #08291e 100%); }
+body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity:.35;
+  background-image: radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px); background-size:4px 4px; }
+
+/* home */
+.home { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:28px; }
+.home-inner { width:100%; max-width:380px; text-align:center; }
+.suits { letter-spacing:.5em; color:#d9b35c; font-size:18px; margin-bottom:14px; opacity:.85; }
+.title { font-family:'Fraunces',serif; font-weight:700; font-size:46px; line-height:1; margin-bottom:10px;
+  background:linear-gradient(180deg,#fff5dd,#d9b35c); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.sub { color:#bcd6c6; font-size:14.5px; line-height:1.5; margin-bottom:26px; }
+.label { display:block; text-align:left; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#8fb6a1; margin:16px 2px 7px; }
+.input { width:100%; padding:14px 16px; border-radius:13px; border:1px solid rgba(217,179,92,.28);
+  background:rgba(0,0,0,.22); color:#fff; font-size:16px; font-family:inherit; outline:none; }
+.input:focus { border-color:#d9b35c; }
+.code-in { letter-spacing:.35em; text-align:center; font-weight:600; font-size:20px; }
+.btn { width:100%; padding:15px; border-radius:13px; font-family:inherit; font-size:15.5px; font-weight:600;
+  border:none; cursor:pointer; margin-top:12px; transition:transform .08s; }
+.btn:active { transform:scale(.985); }
+.btn:disabled { opacity:.45; cursor:not-allowed; }
+.btn.primary { background:linear-gradient(180deg,#e6c068,#cf9f3f); color:#3a2a06; box-shadow:0 6px 18px rgba(0,0,0,.3); }
+.btn.outline { background:transparent; color:#f3ead4; border:1px solid rgba(243,234,212,.28); }
+.btn.ghost { background:transparent; color:#9fc0ad; }
+.err { margin-top:14px; color:#ffb4ab; font-size:13.5px; }
+.foot { margin-top:24px; color:#6f9381; font-size:12px; line-height:1.5; }
+
+/* table */
+.table { min-height:100vh; display:flex; flex-direction:column; }
+.top { display:flex; align-items:center; justify-content:space-between; padding:14px 16px 8px; }
+.codebox { display:flex; flex-direction:column; line-height:1; cursor:pointer; }
+.codelabel { font-size:9.5px; letter-spacing:.18em; color:#7fa691; }
+.codeval { font-family:'Fraunces',serif; font-weight:700; font-size:27px; letter-spacing:.16em; color:#fff5dd; margin-top:3px; }
+.copy { font-size:10px; color:#5f8472; margin-top:3px; }
+.iconbtn { background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.1); color:#f3ead4; width:40px; height:40px; border-radius:11px; font-size:20px; cursor:pointer; }
+.players { display:flex; gap:8px; padding:4px 16px 10px; flex-wrap:wrap; }
+.waiting { color:#7fa691; font-size:13px; padding:4px 2px; }
+.pchip { display:flex; align-items:center; gap:7px; background:rgba(0,0,0,.24); border:1px solid rgba(255,255,255,.09); border-radius:20px; padding:7px 12px; color:#eadfc4; font-size:13px; font-family:inherit; cursor:pointer; }
+.pdot { width:7px; height:7px; border-radius:50%; background:#6fd39a; box-shadow:0 0 6px #6fd39a; }
+.pname { font-weight:600; } .pcount { color:#bca; font-size:12px; }
+.felt { flex:1; display:flex; flex-direction:column; align-items:center; gap:14px; padding:10px 14px; }
+.deck { display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; margin-top:6px; }
+.deckstack { width:72px; height:100px; border-radius:9px; position:relative;
+  background:repeating-linear-gradient(45deg,#7a1f1f,#7a1f1f 6px,#8c2727 6px,#8c2727 12px);
+  border:2px solid #e6c068; box-shadow:0 4px 0 #5d1717,0 9px 0 #4a1212,0 16px 22px rgba(0,0,0,.45);
+  display:flex; align-items:center; justify-content:center; }
+.deckstack::after { content:''; position:absolute; inset:7px; border:1px solid rgba(230,192,104,.5); border-radius:5px; }
+.deckcount { font-family:'Fraunces',serif; font-weight:700; font-size:26px; color:#fff5dd; z-index:1; text-shadow:0 2px 4px rgba(0,0,0,.6); }
+.decklabel { font-size:10px; letter-spacing:.16em; color:#9fc0ad; }
+.deck.shuf .deckstack { animation:shuf .55s ease; }
+@keyframes shuf { 0%{transform:translateX(0) rotate(0)} 25%{transform:translateX(-7px) rotate(-4deg)} 55%{transform:translateX(7px) rotate(4deg)} 80%{transform:translateX(-3px) rotate(-1deg)} 100%{transform:none} }
+.tablearea { position:relative; width:100%; flex:1; min-height:46vh; padding:14px; border-radius:18px; display:flex; align-items:center; justify-content:center; overflow:hidden;
+  background:radial-gradient(120% 120% at 50% 0%, rgba(0,0,0,.16), rgba(0,0,0,.28)); border:1px solid rgba(255,255,255,.06); box-shadow:inset 0 2px 14px rgba(0,0,0,.35); }
+.tablecard { position:absolute; width:62px; height:88px; transform:translate(-50%,-50%); cursor:grab; touch-action:none; border-radius:7px; transition:box-shadow .12s, transform .06s; }
+.tablecard .face, .tablecard .back { width:100%; height:100%; }
+.tablecard.dragging { cursor:grabbing; transition:none; transform:translate(-50%,-50%) scale(1.06); box-shadow:0 16px 30px rgba(0,0,0,.55); }
+.tablecard.peeking { box-shadow:0 0 0 2px #d9b35c, 0 10px 18px rgba(0,0,0,.45); }
+.emptytable, .emptyhand { color:#6f9381; font-size:13px; align-self:center; margin:auto; }
+
+/* cards */
+.card { padding:0; border:none; background:none; cursor:pointer; border-radius:7px; transition:transform .12s; position:relative; display:inline-block; }
+.card:active { transform:translateY(-3px) scale(1.02); }
+.card.peeking { transform:translateY(-6px); box-shadow:0 0 0 2px #d9b35c,0 10px 18px rgba(0,0,0,.45); }
+.face, .back { width:100%; height:100%; border-radius:7px; position:relative; }
+.face { background:linear-gradient(170deg,#fbf7ec,#efe7d2); border:1px solid #cbb98e; box-shadow:0 3px 8px rgba(0,0,0,.35); }
+.back { background:repeating-linear-gradient(45deg,#7a1f1f,#7a1f1f 5px,#8c2727 5px,#8c2727 10px); border:2px solid #e6c068; box-shadow:0 3px 8px rgba(0,0,0,.4); }
+.back::after { content:''; position:absolute; inset:5px; border:1px solid rgba(230,192,104,.55); border-radius:4px; }
+.corner { position:absolute; display:flex; flex-direction:column; align-items:center; line-height:.95; font-weight:700; font-family:'Fraunces',serif; }
+.corner .r { font-size:15px; } .corner .s { font-size:12px; }
+.corner.tl { top:5px; left:6px; } .corner.br { bottom:5px; right:6px; transform:rotate(180deg); }
+.pip { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; }
+.eye { position:absolute; top:-9px; right:-7px; font-size:14px; background:#0e3b2b; border:1px solid #d9b35c; border-radius:50%; width:22px; height:22px; display:flex; align-items:center; justify-content:center; }
+
+/* hand */
+.hand { background:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.4)); border-top:1px solid rgba(217,179,92,.25); padding:12px 14px 18px; }
+.handlabel { font-size:11px; letter-spacing:.13em; color:#9fc0ad; margin-bottom:9px; }
+.handlabel span { text-transform:none; letter-spacing:0; color:#6f9381; font-size:11px; }
+.handcards { display:flex; gap:9px; overflow-x:auto; padding-bottom:4px; min-height:114px; align-items:center; }
+
+/* sheet / toast */
+.scrim { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:flex-end; justify-content:center; z-index:50; }
+.sheet { width:100%; max-width:440px; background:#0e3b2b; border:1px solid rgba(217,179,92,.3); border-bottom:none; border-radius:20px 20px 0 0;
+  padding:18px 16px calc(18px + env(safe-area-inset-bottom)); box-shadow:0 -10px 40px rgba(0,0,0,.5); animation:rise .2s ease; }
+@keyframes rise { from{transform:translateY(30px)} to{transform:none} }
+.sheettitle { font-family:'Fraunces',serif; font-size:18px; margin:2px 4px 14px; color:#fff5dd; }
+.row { display:block; width:100%; text-align:left; padding:15px 16px; border-radius:13px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.07); color:#f3ead4; font-family:inherit; font-size:15.5px; cursor:pointer; margin-bottom:9px; }
+.row.danger { color:#ffb4ab; }
+.toast { position:fixed; top:18px; left:50%; transform:translateX(-50%); z-index:60; background:rgba(8,41,30,.95); border:1px solid #d9b35c; color:#fff5dd; padding:10px 18px; border-radius:30px; font-size:13.5px; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+/* Card Lobby — client. The server is authoritative; we render whatever
+   `state` it sends and emit intents on tap. */
+(function () {
+  const socket = io();
+  const app = document.getElementById("app");
+
+  const SUIT = { S: ["\u2660", "#1a1a1a"], H: ["\u2665", "#b3261e"], D: ["\u2666", "#b3261e"], C: ["\u2663", "#1a1a1a"] };
+  const RLAB = { T: "10" };
+  let me = null;          // {name, code}
+  let state = null;       // latest view from server
+  let sheet = null;       // open action sheet
+  let shuf = false;
+  let dragging = false;   // true while this client is dragging a table card
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  /* ---- socket ---- */
+  socket.on("state", (s) => { state = s; if (dragging) return; render(); }); // don't yank a card mid-drag
+  socket.on("connect_error", () => toast("Connection lost\u2026 retrying"));
+  // lightweight live position from another player's drag — patch just that card, no full re-render
+  socket.on("cardMoved", ({ id, x, y } = {}) => {
+    if (state) { const c = state.table.find((t) => t.id === id); if (c) { c.x = x; c.y = y; } }
+    const el = document.querySelector('.tablecard[data-id="' + id + '"]');
+    if (el) { el.style.left = x * 100 + "%"; el.style.top = y * 100 + "%"; }
+  });
+
+  function emit(ev, arg) { socket.emit(ev, arg); }
+
+  /* ---- card markup ---- */
+  function cardInner(code, show) {
+    if (!show) return '<div class="back"></div>';
+    const r = code.slice(0, -1), s = code.slice(-1);
+    const [sym, col] = SUIT[s];
+    const rl = RLAB[r] || r;
+    return `<div class="face" style="color:${col}">
+        <div class="corner tl"><span class="r">${rl}</span><span class="s">${sym}</span></div>
+        <div class="pip">${sym}</div>
+        <div class="corner br"><span class="r">${rl}</span><span class="s">${sym}</span></div></div>`;
+  }
+  function cardEl(code, faceUp, opts = {}) {
+    const size = opts.size || "md";
+    const dims = { sm: [44, 62], md: [62, 88], lg: [78, 112] }[size];
+    const inner = cardInner(code, faceUp || opts.peeking);
+    const eye = opts.peekedByName ? `<div class="eye" title="${esc(opts.peekedByName)} is peeking">\uD83D\uDC41</div>` : "";
+    return `<button class="card${opts.peeking ? " peeking" : ""}" style="width:${dims[0]}px;height:${dims[1]}px" data-act="${opts.act || ""}" data-id="${opts.id || ""}" data-code="${opts.code || ""}">${inner}${eye}</button>`;
+  }
+
+  /* ---- render ---- */
+  function render() {
+    if (!me) return renderHome();
+    if (!state) { app.innerHTML = '<div class="home"><div class="home-inner"><div class="suits">\u2660 \u2665 \u2666 \u2663</div><p class="sub">Connecting\u2026</p></div></div>'; return; }
+    renderTable();
+    if (sheet) renderSheet();
+  }
+
+  function renderHome(err) {
+    const joining = renderHome._mode === "join";
+    app.innerHTML = `
+    <div class="home"><div class="home-inner">
+      <div class="suits">\u2660 \u2665 \u2666 \u2663</div>
+      <h1 class="title">Card Lobby</h1>
+      <p class="sub">A shared table for playing cards with friends, wherever they are.</p>
+      <label class="label">Your name</label>
+      <input class="input" id="name" maxlength="16" placeholder="e.g. Ada" value="${esc(renderHome._name || "")}" />
+      ${joining ? `
+        <label class="label">Lobby code</label>
+        <input class="input code-in" id="code" maxlength="6" placeholder="ABC123" />
+        <button class="btn primary" id="dojoin">Join table</button>
+        <button class="btn ghost" id="back">Back</button>` : `
+        <button class="btn primary" id="create">Create a table</button>
+        <button class="btn outline" id="dojoinmode">Join with a code</button>`}
+      ${err ? `<div class="err">${esc(err)}</div>` : ""}
+      <p class="foot">Share this site's link, then friends enter your code.</p>
+    </div></div>`;
+
+    const nameEl = document.getElementById("name");
+    nameEl.oninput = () => (renderHome._name = nameEl.value);
+    const need = () => { const n = (renderHome._name || "").trim(); if (!n) { renderHome(false); toast("Enter a name first"); } return n; };
+    if (document.getElementById("create")) document.getElementById("create").onclick = () => { const n = need(); if (n) emit("create", { name: n }, (r) => { if (r && r.ok) { me = { name: n, code: r.code }; render(); } }); };
+    if (document.getElementById("dojoinmode")) document.getElementById("dojoinmode").onclick = () => { if (need()) { renderHome._mode = "join"; renderHome(); } };
+    if (document.getElementById("back")) document.getElementById("back").onclick = () => { renderHome._mode = null; renderHome(); };
+    if (document.getElementById("code")) document.getElementById("code").oninput = (e) => (e.target.value = e.target.value.toUpperCase());
+    if (document.getElementById("dojoin")) document.getElementById("dojoin").onclick = () => {
+      const n = need(); const c = (document.getElementById("code").value || "").trim();
+      if (n && c.length >= 4) emit("join", { name: n, code: c }, (r) => { if (r && r.ok) { me = { name: n, code: r.code }; render(); } else renderHome(r && r.error); });
+    };
+  }
+
+  function renderTable() {
+    const others = state.players.filter((p) => !p.me);
+    const mine = state.players.find((p) => p.me) || { count: 0 };
+    app.innerHTML = `
+    <div class="table">
+      <header class="top">
+        <div class="codebox" id="codebox">
+          <span class="codelabel">TABLE CODE</span>
+          <span class="codeval">${esc(state.code)}</span>
+          <span class="copy">tap to copy</span>
+        </div>
+        <button class="iconbtn" id="menu">\u22EF</button>
+      </header>
+      <div class="players">
+        ${others.length === 0 ? '<div class="waiting">Waiting for friends to join\u2026</div>' : ""}
+        ${others.map((p) => `<button class="pchip" data-act="player" data-id="${p.id}"><span class="pdot"></span><span class="pname">${esc(p.name)}</span><span class="pcount">\uD83C\uDCA0 ${p.count}</span></button>`).join("")}
+      </div>
+      <div class="felt">
+        <div class="deck${shuf ? " shuf" : ""}" id="deck"><div class="deckstack"><span class="deckcount">${state.deckCount}</span></div><span class="decklabel">DECK</span></div>
+        <div class="tablearea">
+          ${state.table.length === 0 ? '<div class="emptytable">Dealt cards land here \u00b7 drag to arrange</div>' : ""}
+          ${state.table.map((c) => {
+            const show = c.faceUp || c.peekedByMe;
+            const eye = !c.peekedByMe && c.peekedByName ? `<div class="eye" title="${esc(c.peekedByName)} is peeking">\uD83D\uDC41</div>` : "";
+            const x = c.x != null ? c.x : 0.5, y = c.y != null ? c.y : 0.45;
+            return `<div class="tablecard${c.peekedByMe ? " peeking" : ""}" data-id="${c.id}" style="left:${x * 100}%;top:${y * 100}%;z-index:${c.z || 1}">${cardInner(c.code || "", show)}${eye}</div>`;
+          }).join("")}
+        </div>
+      </div>
+      <div class="hand">
+        <div class="handlabel">YOUR HAND <span>${mine.count} cards \u00b7 only you can see these</span></div>
+        <div class="handcards">
+          ${state.myHand.length === 0 ? '<div class="emptyhand">No cards yet \u2014 tap the deck to deal</div>' : ""}
+          ${state.myHand.map((code) => cardEl(code, true, { size: "lg", act: "hand", code })).join("")}
+        </div>
+      </div>
+    </div>`;
+    shuf = false;
+
+    document.getElementById("codebox").onclick = () => { navigator.clipboard && navigator.clipboard.writeText(state.code); toast("Code copied"); };
+    document.getElementById("menu").onclick = () => { sheet = { kind: "menu" }; renderSheet(); };
+    document.getElementById("deck").onclick = () => { sheet = { kind: "deck" }; renderSheet(); };
+    app.querySelectorAll("[data-act]").forEach((el) => {
+      el.onclick = () => {
+        const act = el.dataset.act;
+        if (act === "hand") sheet = { kind: "hand", code: el.dataset.code };
+        else if (act === "player") sheet = { kind: "player", pid: el.dataset.id };
+        else return;
+        renderSheet();
+      };
+    });
+    const area = app.querySelector(".tablearea");
+    app.querySelectorAll(".tablecard").forEach((el) => attachTableCard(el, el.dataset.id, area));
+  }
+
+  /* drag-to-position for a table card; a tap (no real movement) opens its menu */
+  function attachTableCard(el, id, area) {
+    let down = false, moved = false, lastX = 0, lastY = 0, last = 0;
+    el.addEventListener("pointerdown", (e) => {
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      down = true; moved = false;
+      el._sx = e.clientX; el._sy = e.clientY;
+    });
+    el.addEventListener("pointermove", (e) => {
+      if (!down) return;
+      if (!moved && Math.hypot(e.clientX - el._sx, e.clientY - el._sy) < 6) return;
+      moved = true; dragging = true;
+      el.classList.add("dragging"); el.style.zIndex = 9999;
+      const r = area.getBoundingClientRect();
+      lastX = Math.min(0.97, Math.max(0.03, (e.clientX - r.left) / r.width));
+      lastY = Math.min(0.94, Math.max(0.06, (e.clientY - r.top) / r.height));
+      el.style.left = lastX * 100 + "%"; el.style.top = lastY * 100 + "%";
+      const now = Date.now();
+      if (now - last > 70) { last = now; emit("dragMove", { id, x: lastX, y: lastY }); } // relay so others see it glide
+    });
+    const finish = (e) => {
+      if (!down) return;
+      down = false;
+      try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+      if (moved) {
+        emit("dropCard", { id, x: lastX, y: lastY });
+        const c = state && state.table.find((t) => t.id === id);
+        if (c) { c.x = lastX; c.y = lastY; } // optimistic, so it doesn't flicker before the broadcast
+        dragging = false;
+      } else {
+        sheet = { kind: "table", card: state.table.find((t) => t.id === id) };
+        renderSheet();
+      }
+    };
+    el.addEventListener("pointerup", finish);
+    el.addEventListener("pointercancel", finish);
+  }
+
+  function renderSheet() {
+    let body = "";
+    const T = (t) => `<h3 class="sheettitle">${t}</h3>`;
+    const R = (act, label, danger) => `<button class="row${danger ? " danger" : ""}" data-row="${act}">${label}</button>`;
+    if (sheet.kind === "deck") body = T("Deck \u00b7 " + state.deckCount + " cards") + R("shuffle", "\uD83D\uDD00 Shuffle deck") + R("dealMe", "\u2935\uFE0F Deal a card to my hand") + R("dealTable", "\uD83C\uDFB4 Deal a card to the table (face down)");
+    else if (sheet.kind === "table") { const c = sheet.card; body = T("Table card") + R("flip", c.faceUp ? "\uD83D\uDD3D Turn face down" : "\uD83D\uDD3C Turn face up (everyone sees it)") + (!c.faceUp ? R("peek", c.peekedByMe ? "\uD83D\uDE48 Stop peeking" : "\uD83D\uDC41 Peek privately") : "") + R("take", "\u270B Take into my hand") + R("toDeck", "\u21A9\uFE0F Return to deck"); }
+    else if (sheet.kind === "hand") body = T("Your card") + R("playUp", "\uD83C\uDFB4 Play to table, face up") + R("playDown", "\uD83C\uDCA0 Play to table, face down") + R("handDeck", "\u21A9\uFE0F Return to deck");
+    else if (sheet.kind === "player") { const p = state.players.find((x) => x.id === sheet.pid); body = T(esc(p ? p.name : "")) + R("dealPlayer", "\u2935\uFE0F Deal a card to " + esc(p ? p.name : "")); }
+    else if (sheet.kind === "menu") body = T("Table options") + R("shuffle", "\uD83D\uDD00 Shuffle deck") + R("collect", "\u267B\uFE0F Collect all cards & reshuffle") + R("leave", "\uD83D\uDEAA Leave table", true);
+
+    let scrim = document.getElementById("scrim");
+    if (!scrim) { scrim = document.createElement("div"); scrim.id = "scrim"; scrim.className = "scrim"; document.body.appendChild(scrim); }
+    scrim.innerHTML = `<div class="sheet" id="sheetinner">${body}</div>`;
+    scrim.onclick = (e) => { if (e.target === scrim) closeSheet(); };
+    scrim.querySelectorAll("[data-row]").forEach((el) => (el.onclick = () => handleRow(el.dataset.row)));
+  }
+  function closeSheet() { sheet = null; const s = document.getElementById("scrim"); if (s) s.remove(); }
+
+  function handleRow(act) {
+    const c = sheet.card, code = sheet.code, pid = sheet.pid;
+    const map = {
+      shuffle: () => { emit("shuffle"); shuf = true; },
+      dealMe: () => emit("dealToMe"),
+      dealTable: () => emit("dealToTable"),
+      dealPlayer: () => emit("dealToPlayer", { pid }),
+      flip: () => emit("flip", { id: c.id }),
+      peek: () => emit("peek", { id: c.id }),
+      take: () => emit("takeFromTable", { id: c.id }),
+      toDeck: () => emit("tableToDeck", { id: c.id }),
+      playUp: () => emit("playFromHand", { code, faceUp: true }),
+      playDown: () => emit("playFromHand", { code, faceUp: false }),
+      handDeck: () => emit("handToDeck", { code }),
+      collect: () => { emit("collectAll"); shuf = true; },
+      leave: () => { emit("leave"); me = null; state = null; },
+    };
+    (map[act] || (() => {}))();
+    closeSheet();
+    render();
+  }
+
+  let toastT;
+  function toast(m) {
+    let t = document.getElementById("toast");
+    if (!t) { t = document.createElement("div"); t.id = "toast"; t.className = "toast"; document.body.appendChild(t); }
+    t.textContent = m; clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 1800);
+  }
+
+  render();
+})();
+  </script>
+</body>
+</html>
