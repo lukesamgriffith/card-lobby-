@@ -18,6 +18,7 @@ const express = require("express");
 const http = require("http");
 const path = require("path");
 const { Server } = require("socket.io");
+const poker = require("./poker");
 
 const app = express();
 const server = http.createServer(app);
@@ -81,7 +82,34 @@ function buildView(lobby, cid) {
       .filter((id) => lobby.players.has(id))
       .map((id) => ({ id, name: lobby.players.get(id).name, count: lobby.players.get(id).hand.length, me: id === cid, away: !lobby.players.get(id).connected })),
     myHand: lobby.players.get(cid) ? lobby.players.get(cid).hand : [],
+    poker: pokerView(lobby, cid),
   };
+}
+function pokerView(lobby, cid) {
+  const pk = lobby.poker;
+  if (!pk || !pk.on) return null;
+  const hand = pk.hand;
+  const players = lobby.order.filter((id) => lobby.players.has(id)).map((id) => {
+    const p = lobby.players.get(id);
+    const ph = hand && hand.inHand[id];
+    return {
+      id, name: p.name, chips: p.chips, away: !p.connected, me: id === cid,
+      inHand: !!ph, folded: ph ? ph.folded : false, allIn: ph ? ph.allIn : false, cRound: ph ? ph.cRound : 0,
+      isButton: pk.buttonCid === id, isSB: hand ? hand.sbCid === id : false, isBB: hand ? hand.bbCid === id : false,
+      isTurn: hand ? hand.toAct === id : false,
+    };
+  });
+  const seatedN = lobby.order.filter((id) => { const p = lobby.players.get(id); return p && p.connected && p.chips > 0; }).length;
+  const v = { on: true, sb: pk.sb, bb: pk.bb, buttonCid: pk.buttonCid, players, canStart: (!hand || hand.phase === "done") && seatedN >= 2, handLive: !!hand && hand.phase !== "done" };
+  if (hand) {
+    v.phase = hand.phase; v.pot = hand.pot; v.community = hand.community.slice(); v.currentBet = hand.currentBet; v.toAct = hand.toAct;
+    v.myHole = hand.inHand[cid] ? hand.inHand[cid].hole : null;
+    v.myFolded = hand.inHand[cid] ? hand.inHand[cid].folded : false;
+    v.myTurn = hand.toAct === cid;
+    v.legal = v.myTurn ? poker.legalActions(lobby, cid) : null;
+    v.results = hand.phase === "done" ? hand.results : null;
+  }
+  return v;
 }
 function broadcast(lobby) {
   for (const p of lobby.players.values()) {
@@ -114,7 +142,7 @@ io.on("connection", (socket) => {
       p.connected = true; p.sockId = socket.id;
       if (name) p.name = name.slice(0, 16);
     } else {
-      p = { name: (name || "Player").slice(0, 16), hand: [], connected: true, sockId: socket.id, _cid: cid };
+      p = { name: (name || "Player").slice(0, 16), hand: [], chips: 0, connected: true, sockId: socket.id, _cid: cid };
       lobby.players.set(cid, p);
       lobby.order.push(cid);
     }
@@ -171,6 +199,11 @@ io.on("connection", (socket) => {
       if (p) p.hand.push(l.deck.shift());
     }
   }));
+  socket.on("dealMany", act1((l, _p, { pid, n } = {}) => {
+    if (!l.players.has(pid)) return;
+    let k = Math.max(1, Math.min(20, parseInt(n, 10) || 1));
+    while (k-- > 0 && l.deck.length) l.players.get(pid).hand.push(l.deck.shift());
+  }));
   socket.on("flip", act1((l, _p, { id } = {}) => {
     const c = l.table.find((t) => t.id === id);
     if (c) { c.faceUp = !c.faceUp; if (c.faceUp) c.peekedBy = null; }
@@ -205,6 +238,18 @@ io.on("connection", (socket) => {
     const cur = p.hand.slice().sort().join(",");
     const next = order.slice().sort().join(",");
     if (cur === next) p.hand = order.slice(); // accept only a true permutation of the current hand
+  }));
+
+  /* ---- poker ---- */
+  socket.on("pokerOn", act((l) => { if (!l.poker || !l.poker.on) l.poker = { on: true, sb: 5, bb: 10, buttonCid: null, hand: null }; }));
+  socket.on("pokerOff", act((l) => { l.poker = null; }));
+  socket.on("pokerAddChips", act1((l, p, { amount } = {}) => {
+    const a = Math.max(1, Math.min(100000, parseInt(amount, 10) || 0));
+    if (l.poker && l.poker.on) p.chips += a;
+  }));
+  socket.on("pokerStart", act((l) => { if (l.poker && l.poker.on) poker.startHand(l); }));
+  socket.on("pokerAction", act1((l, _p, { action, amount } = {}) => {
+    if (l.poker && l.poker.on && l.poker.hand) poker.applyAction(l, socket.data.cid, action, parseInt(amount, 10) || 0);
   }));
   socket.on("collectAll", act((l) => {
     l.table.forEach((c) => l.deck.push(c.code));
@@ -244,6 +289,7 @@ io.on("connection", (socket) => {
     const p = lobby.players.get(cid);
     if (!p || p.sockId !== socket.id) return; // a newer socket already took over this seat
     p.connected = false; p.sockId = null;
+    if (lobby.poker && lobby.poker.hand) poker.foldOnLeave(lobby, cid); // don't stall the table mid-hand
     broadcast(lobby);
     setTimeout(() => {
       const lb = lobbies.get(lobby.code);
