@@ -149,9 +149,10 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
 .showlist { display:flex; flex-direction:column; gap:7px; width:100%; max-width:380px; }
 .showrow { display:flex; align-items:center; gap:9px; background:rgba(0,0,0,.22); border-radius:10px; padding:6px 10px; animation:rise .25s ease; }
 .sn { font-weight:600; color:#fff5dd; flex:1; text-align:left; font-size:13.5px; }
-.scards { display:flex; gap:3px; }
-.scard { width:30px; height:42px; }
-.scard .face, .scard .back { width:100%; height:100%; }
+.scards { display:flex; gap:5px; }
+.mini { display:inline-flex; align-items:center; gap:2px; background:linear-gradient(170deg,#fbf7ec,#efe7d2); border:1px solid #cbb98e; border-radius:6px; padding:3px 7px; font-family:'Fraunces',serif; font-weight:700; }
+.mini .mr { font-size:16px; line-height:1; }
+.mini .ms { font-size:13px; line-height:1; }
 .shand { font-size:12px; color:#9fc0ad; min-width:96px; text-align:right; }
 
 /* sheet / toast */
@@ -453,8 +454,14 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
   }
 
   /* ---------------- poker mode UI ---------------- */
+  function cardMini(code) {
+    const r = code.slice(0, -1), s = code.slice(-1);
+    const [sym, col] = SUIT[s];
+    const rl = RLAB[r] || r;
+    return `<span class="mini" style="color:${col}"><span class="mr">${rl}</span><span class="ms">${sym}</span></span>`;
+  }
   function showHandsHtml(list) {
-    return (list || []).map((s) => `<div class="showrow"><span class="sn">${esc(s.name)}</span><span class="scards">${(s.hole || []).map((c) => `<span class="scard">${cardInner(c, true)}</span>`).join("")}</span>${s.hand ? `<span class="shand">${s.hand}</span>` : ""}</div>`).join("");
+    return (list || []).map((s) => `<div class="showrow"><span class="sn">${esc(s.name)}</span><span class="scards">${(s.hole || []).map((c) => cardMini(c)).join("")}</span>${s.hand ? `<span class="shand">${s.hand}</span>` : ""}</div>`).join("");
   }
   function pokerCenter(pk) {
     if (pk.revealing) {

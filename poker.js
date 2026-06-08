@@ -217,10 +217,11 @@ function applyAction(lobby, cid, action, amount) {
 
   // only one player left -> they win immediately
   if (liveCount(hand) === 1) { awardUncontested(lobby); return { ok: true }; }
-  // betting round finished?
-  if (hand.needToAct.size === 0 || canActCount(hand) <= 1) { advanceStreet(lobby); return { ok: true }; }
+  // betting round finished only once everyone who can act has matched the bet.
+  // (don't short-circuit on an all-in: the opponent must still get to call/raise/fold.)
+  if (hand.needToAct.size === 0) { advanceStreet(lobby); return { ok: true }; }
   hand.toAct = activeFrom(hand, pos + 1);
-  if (!hand.toAct) advanceStreet(lobby);
+  if (!hand.toAct) advanceStreet(lobby); // nobody left who can act -> run it out
   return { ok: true };
 }
 
@@ -372,8 +373,8 @@ function foldOnLeave(lobby, cid) {
   ph.folded = true; hand.needToAct.delete(cid);
   if (liveCount(hand) === 1) return awardUncontested(lobby);
   if (hand.toAct === cid) {
-    if (hand.needToAct.size === 0 || canActCount(hand) <= 1) advanceStreet(lobby);
-    else hand.toAct = activeFrom(lobby.poker.hand, hand.order.indexOf(cid) + 1);
+    if (hand.needToAct.size === 0) advanceStreet(lobby);
+    else { hand.toAct = activeFrom(hand, hand.order.indexOf(cid) + 1); if (!hand.toAct) advanceStreet(lobby); }
   }
 }
 
