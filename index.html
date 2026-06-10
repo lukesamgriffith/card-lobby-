@@ -75,11 +75,13 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
 .card { padding:0; border:none; background:none; cursor:pointer; border-radius:7px; transition:transform .12s; position:relative; display:inline-block; }
 .card:active { transform:translateY(-3px) scale(1.02); }
 .card.peeking { transform:translateY(-6px); box-shadow:0 0 0 2px #d9b35c,0 10px 18px rgba(0,0,0,.45); }
-.face, .back { width:100%; height:100%; border-radius:7px; position:relative; }
-.face { background:linear-gradient(170deg,#fbf7ec,#efe7d2); border:1px solid #cbb98e; box-shadow:0 3px 8px rgba(0,0,0,.35); }
-.back { background:repeating-linear-gradient(45deg,#7a1f1f,#7a1f1f 5px,#8c2727 5px,#8c2727 10px); border:2px solid #e6c068; box-shadow:0 3px 8px rgba(0,0,0,.4); }
-.back::after { content:''; position:absolute; inset:5px; border:1px solid rgba(230,192,104,.55); border-radius:4px; }
-.corner { position:absolute; display:flex; flex-direction:column; align-items:center; line-height:.95; font-weight:700; font-family:'Fraunces',serif; }
+.face, .back { width:100%; height:100%; border-radius:var(--cd-radius,7px); position:relative; }
+.face { background:var(--cd-face-bg,linear-gradient(170deg,#fbf7ec,#efe7d2)); border:1px solid var(--cd-face-border,#cbb98e); box-shadow:var(--cd-shadow,0 3px 8px rgba(0,0,0,.35)); }
+.face.red { color:var(--cd-red,#b3261e); }
+.face.black { color:var(--cd-black,#1a1a1a); }
+.back { background:var(--cd-back-bg,repeating-linear-gradient(45deg,#7a1f1f,#7a1f1f 5px,#8c2727 5px,#8c2727 10px)); border:2px solid var(--cd-back-border,#e6c068); box-shadow:var(--cd-shadow,0 3px 8px rgba(0,0,0,.4)); }
+.back::after { content:''; position:absolute; inset:5px; border:1px solid rgba(255,255,255,.28); border-radius:4px; }
+.corner { position:absolute; display:flex; flex-direction:column; align-items:center; line-height:.95; font-weight:700; font-family:var(--cd-font,'Fraunces',serif); }
 .corner .r { font-size:15px; } .corner .s { font-size:12px; }
 .corner.tl { top:5px; left:6px; } .corner.br { bottom:5px; right:6px; transform:rotate(180deg); }
 .pip { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; }
@@ -150,9 +152,41 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
 .showrow { display:flex; align-items:center; gap:9px; background:rgba(0,0,0,.22); border-radius:10px; padding:6px 10px; animation:rise .25s ease; }
 .sn { font-weight:600; color:#fff5dd; flex:1; text-align:left; font-size:13.5px; }
 .scards { display:flex; gap:5px; }
-.mini { display:inline-flex; align-items:center; gap:2px; background:linear-gradient(170deg,#fbf7ec,#efe7d2); border:1px solid #cbb98e; border-radius:6px; padding:3px 7px; font-family:'Fraunces',serif; font-weight:700; }
+.mini { display:inline-flex; align-items:center; gap:2px; background:var(--cd-face-bg,linear-gradient(170deg,#fbf7ec,#efe7d2)); border:1px solid var(--cd-face-border,#cbb98e); border-radius:6px; padding:3px 7px; font-family:var(--cd-font,'Fraunces',serif); font-weight:700; }
+.mini.red { color:var(--cd-red,#b3261e); }
+.mini.black { color:var(--cd-black,#1a1a1a); }
 .mini .mr { font-size:16px; line-height:1; }
 .mini .ms { font-size:13px; line-height:1; }
+
+/* game picker + how-to + theme picker */
+.gamecat { font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#7fae93; margin:14px 4px 7px; font-weight:600; }
+.gamerow { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.grow-main { display:flex; flex-direction:column; gap:2px; text-align:left; }
+.gname { font-size:15.5px; color:#f3ead4; }
+.gmeta { font-size:12px; color:#9fc0ad; }
+.tag { font-size:11px; font-weight:700; padding:4px 9px; border-radius:20px; white-space:nowrap; }
+.tag.ready { background:linear-gradient(180deg,#e6c068,#cf9f3f); color:#3a2a06; }
+.tag.soon { background:rgba(255,255,255,.08); color:#9fc0ad; border:1px solid rgba(159,192,173,.3); }
+.gmeta2 { font-size:12.5px; color:#9fc0ad; margin:-6px 4px 12px; }
+.rules { margin:0 0 14px; padding:0 0 0 22px; display:flex; flex-direction:column; gap:7px; }
+.rules li { color:#e7dcc2; font-size:14px; line-height:1.4; }
+.row.disabled { opacity:.6; text-align:center; cursor:default; }
+.soonnote { text-align:center; color:#e6c068; font-weight:600; padding:13px; background:rgba(230,192,104,.08); border:1px solid rgba(230,192,104,.25); border-radius:13px; margin-bottom:9px; }
+.themegrid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.themeopt { display:flex; flex-direction:column; align-items:center; gap:7px; padding:11px 6px; border-radius:13px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); cursor:pointer; }
+.themeopt.on { border-color:#e6c068; background:rgba(230,192,104,.12); }
+.swatch { position:relative; width:54px; height:46px; }
+.sw-back { position:absolute; left:2px; top:3px; width:32px; height:44px; border-radius:6px; border:2px solid; transform:rotate(-9deg); }
+.sw-face { position:absolute; right:2px; top:0; width:32px; height:44px; border-radius:6px; border:1px solid; transform:rotate(8deg); display:flex; align-items:center; justify-content:center; gap:1px; font-weight:700; font-size:14px; }
+.themename { font-size:12.5px; color:#f3ead4; }
+
+/* coming-soon screen */
+.soonfelt { align-items:center; justify-content:center; }
+.sooncard { max-width:420px; width:100%; text-align:center; background:rgba(0,0,0,.2); border:1px solid rgba(217,179,92,.25); border-radius:18px; padding:22px 18px; }
+.suits.small { font-size:20px; letter-spacing:.18em; color:#d9b35c; }
+.soontitle { font-family:'Fraunces',serif; font-size:24px; color:#fff5dd; margin:8px 0 2px; }
+.soonmsg { color:#cde0d4; font-size:14px; margin:12px 0 14px; }
+.sooncard .rules { text-align:left; }
 .shand { font-size:12px; color:#9fc0ad; min-width:96px; text-align:right; }
 
 /* sheet / toast */
@@ -178,6 +212,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
 
   const SUIT = { S: ["\u2660", "#1a1a1a"], H: ["\u2665", "#b3261e"], D: ["\u2666", "#b3261e"], C: ["\u2663", "#1a1a1a"] };
   const RLAB = { T: "10" };
+  const isRed = (s) => s === "H" || s === "D";
   let me = null;          // {name, code}
   let state = null;       // latest view from server
   let sheet = null;       // open action sheet
@@ -189,6 +224,64 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
   let lastTurnKey = null; // resets the raise slider to the minimum each new turn
   let chipAmt = 500;      // chosen amount for the add-chips chooser
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  /* ---- card themes ----
+     Data-driven and extensible: add an object here and it shows up in the picker.
+     Each theme sets CSS custom properties the card styles read; cards re-skin live. */
+  const THEMES = [
+    { id: "classic", name: "Classic", t: { faceBg: "linear-gradient(170deg,#fbf7ec,#efe7d2)", faceBorder: "#cbb98e", red: "#b3261e", black: "#1a1a1a", font: "'Fraunces',serif", backBg: "repeating-linear-gradient(45deg,#7a1f1f,#7a1f1f 5px,#8c2727 5px,#8c2727 10px)", backBorder: "#e6c068" } },
+    { id: "midnight", name: "Midnight", t: { faceBg: "linear-gradient(170deg,#232a40,#171c2b)", faceBorder: "#394261", red: "#ff5d6c", black: "#dfe6f5", font: "'Fraunces',serif", backBg: "repeating-linear-gradient(45deg,#101729,#101729 6px,#18223c 6px,#18223c 12px)", backBorder: "#c9a24b" } },
+    { id: "ocean", name: "Ocean", t: { faceBg: "linear-gradient(170deg,#f1f8fb,#dbeaf2)", faceBorder: "#9fc2d4", red: "#c0392b", black: "#123c50", font: "'Fraunces',serif", backBg: "repeating-linear-gradient(45deg,#0d4f6c,#0d4f6c 6px,#13627f 6px,#13627f 12px)", backBorder: "#7fd1e6" } },
+    { id: "crimson", name: "Crimson", t: { faceBg: "linear-gradient(170deg,#fbf7ec,#efe7d2)", faceBorder: "#cbb98e", red: "#a01b1b", black: "#1a1a1a", font: "'Fraunces',serif", backBg: "repeating-linear-gradient(45deg,#5e0f12,#5e0f12 6px,#7a1417 6px,#7a1417 12px)", backBorder: "#e6c068" } },
+    { id: "forest", name: "Forest", t: { faceBg: "linear-gradient(170deg,#f7faf2,#e6efd9)", faceBorder: "#b7cfa0", red: "#b3261e", black: "#1d3a23", font: "'Fraunces',serif", backBg: "repeating-linear-gradient(45deg,#14512f,#14512f 6px,#1c6b3f 6px,#1c6b3f 12px)", backBorder: "#d8b24a" } },
+    { id: "neon", name: "Neon", t: { faceBg: "linear-gradient(170deg,#141a2c,#0c111d)", faceBorder: "#2a3550", red: "#ff3ca6", black: "#39e6ff", font: "'Outfit',sans-serif", backBg: "linear-gradient(135deg,#161d35,#0a0f1e)", backBorder: "#39e6ff", shadow: "0 0 12px rgba(57,230,255,.35)" } },
+    { id: "paper", name: "Paper", t: { faceBg: "#ffffff", faceBorder: "#d7d7dd", red: "#cf3a2e", black: "#23262e", font: "'Outfit',sans-serif", backBg: "repeating-linear-gradient(45deg,#e7e7ee,#e7e7ee 6px,#f6f6fa 6px,#f6f6fa 12px)", backBorder: "#c4c4cc" } },
+  ];
+  let theme = (() => { try { return localStorage.getItem("cl_theme") || "classic"; } catch (_) { return "classic"; } })();
+  function applyTheme(id) {
+    const th = THEMES.find((x) => x.id === id) || THEMES[0];
+    theme = th.id; const t = th.t, r = document.documentElement.style;
+    r.setProperty("--cd-face-bg", t.faceBg); r.setProperty("--cd-face-border", t.faceBorder);
+    r.setProperty("--cd-red", t.red); r.setProperty("--cd-black", t.black);
+    r.setProperty("--cd-font", t.font || "'Fraunces',serif");
+    r.setProperty("--cd-back-bg", t.backBg); r.setProperty("--cd-back-border", t.backBorder);
+    r.setProperty("--cd-radius", t.radius || "7px");
+    r.setProperty("--cd-shadow", t.shadow || "0 3px 8px rgba(0,0,0,.35)");
+    try { localStorage.setItem("cl_theme", th.id); } catch (_) {}
+  }
+
+  /* ---- game registry ----
+     Drives the picker, the categories, and the How-to-play pages. status:'ready'
+     means it's playable now; 'soon' shows rules + a coming-soon note. */
+  const CATS = ["Sandbox", "Casino", "Trick-taking", "Rummy", "Shedding", "Family", "Social", "Solo"];
+  const GAMES = [
+    { id: "freeform", name: "Free-form table", cat: "Sandbox", players: "2\u20138", status: "ready",
+      rules: ["An open sandbox \u2014 no rules are enforced.", "Tap the deck to deal to yourself, the table, or other players.", "Tap a table card to flip it, peek privately, or take it into your hand.", "Drag cards to arrange them; drag a hand card onto the table to play it."] },
+    { id: "poker", name: "Texas Hold'em", cat: "Casino", players: "2\u20138", status: "ready",
+      rules: ["Everyone gets 2 private hole cards.", "Make your best 5-card hand from your 2 cards plus 5 shared community cards.", "Betting rounds: pre-flop, flop (3 cards), turn (1), river (1).", "On your turn: check, call, raise, or fold. Small and big blinds force the early action.", "Best hand at showdown wins the pot. Ranking: high card, pair, two pair, trips, straight, flush, full house, quads, straight flush."] },
+    { id: "blackjack", name: "Blackjack", cat: "Casino", players: "1\u20136", status: "soon",
+      rules: ["Beat the dealer by getting closer to 21 without going over.", "Number cards score their value, J/Q/K are 10, an Ace is 1 or 11.", "Hit to draw another card, stand to hold. Go over 21 and you bust.", "The dealer draws to 16 and stands on 17.", "A natural blackjack (Ace + ten-card) pays extra."] },
+    { id: "hearts", name: "Hearts", cat: "Trick-taking", players: "4", status: "soon",
+      rules: ["Avoid taking points: every heart is 1 point, the Queen of Spades is 13.", "Follow the suit that was led if you can; otherwise play anything.", "The highest card of the led suit wins the trick \u2014 and any points in it.", "Pass 3 cards to an opponent at the start of each hand.", "Lowest score wins. Take ALL the points ('shoot the moon') to hand 26 to everyone else."] },
+    { id: "spades", name: "Spades", cat: "Trick-taking", players: "4", status: "soon",
+      rules: ["Partnership trick-taking where spades are always trump.", "Each player bids how many tricks they expect to win.", "Make your team's combined bid to score; fall short and lose those points.", "Follow suit if you can. You can't lead spades until they've been 'broken'.", "First partnership to 500 points wins."] },
+    { id: "gin", name: "Gin Rummy", cat: "Rummy", players: "2", status: "soon",
+      rules: ["Draw and discard to form melds: runs (3+ in a suit) and sets (3\u20134 of a kind).", "Cards not in a meld are 'deadwood'.", "Knock when your deadwood totals 10 or less to score the difference.", "Gin (no deadwood at all) earns a bonus.", "First to 100 points wins the game."] },
+    { id: "bigtwo", name: "Big Two", cat: "Shedding", players: "4", status: "soon",
+      rules: ["Be the first to shed all your cards.", "Play singles, pairs, or 5-card poker hands that beat the previous play.", "2 is the highest rank; suits rank \u2666 < \u2663 < \u2665 < \u2660.", "Pass if you can't or won't beat the last play; the round resets once everyone passes.", "Whoever holds the 3\u2666 leads the very first round."] },
+    { id: "crazy8s", name: "Crazy Eights", cat: "Family", players: "2\u20136", status: "soon",
+      rules: ["Match the top discard by either rank or suit.", "Can't play? Draw cards until you can.", "Eights are wild \u2014 play one any time and name the next suit.", "First to empty their hand wins.", "It's the family ancestor of UNO."] },
+    { id: "gofish", name: "Go Fish", cat: "Family", players: "2\u20136", status: "soon",
+      rules: ["Collect sets of four of a kind.", "On your turn, ask another player for a rank you already hold.", "If they have it they hand it over, and you ask again.", "If they don't \u2014 'Go Fish' \u2014 draw from the pool and your turn ends.", "Most completed sets when the cards run out wins."] },
+    { id: "war", name: "War", cat: "Family", players: "2", status: "soon",
+      rules: ["Split the deck evenly, kept face-down.", "Both players flip their top card; the higher card wins both.", "A tie means 'war': lay cards down and flip again to settle it.", "Win every card to win the game.", "Pure luck \u2014 a perfect quick filler."] },
+    { id: "cheat", name: "Cheat (Bluff)", cat: "Social", players: "3\u20136", status: "soon",
+      rules: ["Goal: be the first to empty your hand.", "Play cards face-down while claiming a rank in sequence (e.g. 'two 7s').", "You're allowed to lie about what you put down.", "Anyone can call 'Cheat!' \u2014 flip the cards. A caught liar takes the pile; a wrong accuser takes it instead.", "Also known as Bluff or I Doubt It."] },
+    { id: "solitaire", name: "Solitaire (Klondike)", cat: "Solo", players: "1", status: "soon",
+      rules: ["A solo game you play at your own table.", "Build the four foundations up by suit, from Ace to King.", "On the tableau, stack cards down in alternating colours.", "Turn cards from the stock when you're stuck.", "Move every card to the foundations to win."] },
+  ];
+  const gameById = (id) => GAMES.find((g) => g.id === id) || GAMES[0];
+  const currentMode = () => (state && state.mode) ? state.mode : ((state && state.poker && state.poker.on) ? "poker" : "freeform");
 
   // stable per-device id so a reconnect restores the same seat + hand
   const clientId = (() => {
@@ -229,9 +322,9 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
   function cardInner(code, show) {
     if (!show) return '<div class="back"></div>';
     const r = code.slice(0, -1), s = code.slice(-1);
-    const [sym, col] = SUIT[s];
+    const [sym] = SUIT[s];
     const rl = RLAB[r] || r;
-    return `<div class="face" style="color:${col}">
+    return `<div class="face ${isRed(s) ? "red" : "black"}">
         <div class="corner tl"><span class="r">${rl}</span><span class="s">${sym}</span></div>
         <div class="pip">${sym}</div>
         <div class="corner br"><span class="r">${rl}</span><span class="s">${sym}</span></div></div>`;
@@ -248,8 +341,10 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
   function render() {
     if (!me) return renderHome();
     if (!state) { app.innerHTML = '<div class="home"><div class="home-inner"><div class="suits">\u2660 \u2665 \u2666 \u2663</div><p class="sub">Connecting\u2026</p></div></div>'; return; }
-    if (state.poker && state.poker.on) renderPoker();
-    else renderTable();
+    const mode = currentMode();
+    if (mode === "poker") renderPoker();
+    else if (mode === "freeform") renderTable();
+    else renderComingSoon(mode);
     if (sheet) renderSheet();
   }
 
@@ -286,6 +381,31 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
       const n = need(); const c = (document.getElementById("code").value || "").trim();
       if (n && c.length >= 4) emit("join", { name: n, code: c, clientId }, (r) => { if (r && r.ok) { me = { name: n, code: r.code }; saveMe(); render(); } else renderHome(r && r.error); });
     };
+  }
+
+  function renderComingSoon(mode) {
+    const g = gameById(mode);
+    app.innerHTML = `
+    <div class="table">
+      <header class="top">
+        <div class="codebox" id="codebox"><span class="codelabel">TABLE CODE</span><span class="codeval">${esc(state.code)}</span><span class="copy">tap to copy</span></div>
+        <button class="iconbtn" id="menu">\u22EF</button>
+      </header>
+      <div class="felt soonfelt">
+        <div class="sooncard">
+          <div class="suits small">\u2660 \u2665 \u2666 \u2663</div>
+          <h2 class="soontitle">${esc(g.name)}</h2>
+          <div class="gmeta2">${g.cat} \u00b7 ${g.players} players</div>
+          <p class="soonmsg">This game is in the works. Here's how it'll play:</p>
+          <ol class="rules">${g.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol>
+          <button class="btn primary" id="backff">\u2039 Back to the table</button>
+        </div>
+      </div>
+    </div>`;
+    const $ = (id) => document.getElementById(id);
+    $("codebox").onclick = () => { navigator.clipboard && navigator.clipboard.writeText(state.code); toast("Code copied"); };
+    $("menu").onclick = () => { sheet = { kind: "menu" }; renderSheet(); };
+    $("backff").onclick = () => emit("setMode", { mode: "freeform" });
   }
 
   function renderTable() {
@@ -456,9 +576,9 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
   /* ---------------- poker mode UI ---------------- */
   function cardMini(code) {
     const r = code.slice(0, -1), s = code.slice(-1);
-    const [sym, col] = SUIT[s];
+    const [sym] = SUIT[s];
     const rl = RLAB[r] || r;
-    return `<span class="mini" style="color:${col}"><span class="mr">${rl}</span><span class="ms">${sym}</span></span>`;
+    return `<span class="mini ${isRed(s) ? "red" : "black"}"><span class="mr">${rl}</span><span class="ms">${sym}</span></span>`;
   }
   function showHandsHtml(list) {
     return (list || []).map((s) => `<div class="showrow"><span class="sn">${esc(s.name)}</span><span class="scards">${(s.hole || []).map((c) => cardMini(c)).join("")}</span>${s.hand ? `<span class="shand">${s.hand}</span>` : ""}</div>`).join("");
@@ -610,8 +730,38 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
     else if (sheet.kind === "table") { const c = sheet.card; body = T("Table card") + R("flip", c.faceUp ? "\uD83D\uDD3D Turn face down" : "\uD83D\uDD3C Turn face up (everyone sees it)") + (!c.faceUp ? R("peek", c.peekedByMe ? "\uD83D\uDE48 Stop peeking" : "\uD83D\uDC41 Peek privately") : "") + R("take", "\u270B Take into my hand") + R("toDeck", "\u21A9\uFE0F Return to deck"); }
     else if (sheet.kind === "hand") body = T("Your card") + R("playUp", "\uD83C\uDFB4 Play to table, face up") + R("playDown", "\uD83C\uDCA0 Play to table, face down") + R("handDeck", "\u21A9\uFE0F Return to deck");
     else if (sheet.kind === "player") { const p = state.players.find((x) => x.id === sheet.pid); body = T(esc(p ? p.name : "")) + R("dealPlayer", "\u2935\uFE0F Deal a card to " + esc(p ? p.name : "")); }
-    else if (sheet.kind === "menu") body = T("Table options") + R("shuffle", "\uD83D\uDD00 Shuffle deck") + R("collect", "\u267B\uFE0F Collect all cards & reshuffle") + R("pokerOn", "\u2660 Start poker mode") + R("leave", "\uD83D\uDEAA Leave table", true);
-    else if (sheet.kind === "pmenu") body = T("Poker table") + R("openchips", "\uD83E\uDE99 Add chips (any player)") + R("pokerOff", "\u2660 Turn off poker mode") + R("leave", "\uD83D\uDEAA Leave table", true);
+    else if (sheet.kind === "menu") body = T("Table options") + R("opengames", "\uD83C\uDFB2 Games \u00b7 " + esc(gameById(currentMode()).name) + " \u203A") + R("openthemes", "\uD83C\uDFB4 Card theme \u00b7 " + esc((THEMES.find((x) => x.id === theme) || THEMES[0]).name) + " \u203A") + R("howto", "\u2139\uFE0F How to play") + R("shuffle", "\uD83D\uDD00 Shuffle deck") + R("collect", "\u267B\uFE0F Collect all cards & reshuffle") + R("leave", "\uD83D\uDEAA Leave table", true);
+    else if (sheet.kind === "pmenu") body = T("Poker table") + R("opengames", "\uD83C\uDFB2 Games \u00b7 Texas Hold'em \u203A") + R("openthemes", "\uD83C\uDFB4 Card theme \u00b7 " + esc((THEMES.find((x) => x.id === theme) || THEMES[0]).name) + " \u203A") + R("howto", "\u2139\uFE0F How to play") + R("openchips", "\uD83E\uDE99 Add chips (any player)") + R("leave", "\uD83D\uDEAA Leave table", true);
+    else if (sheet.kind === "games") {
+      body = T("Choose a game");
+      for (const cat of CATS) {
+        const gs = GAMES.filter((g) => g.cat === cat);
+        if (!gs.length) continue;
+        body += `<div class="gamecat">${cat}</div>`;
+        body += gs.map((g) => {
+          const cur = g.id === currentMode();
+          const tag = g.status === "ready" ? `<span class="tag ready">${cur ? "Playing" : "Play"}</span>` : '<span class="tag soon">Soon</span>';
+          return `<button class="row gamerow" data-row="game:${g.id}"><span class="grow-main"><span class="gname">${esc(g.name)}</span><span class="gmeta">${g.players} players</span></span>${tag}</button>`;
+        }).join("");
+      }
+    }
+    else if (sheet.kind === "game") {
+      const g = gameById(sheet.gid); const cur = g.id === currentMode();
+      body = T(esc(g.name)) + `<div class="gmeta2">${g.cat} \u00b7 ${g.players} players</div>`
+        + `<ol class="rules">${g.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol>`
+        + (cur ? '<div class="row disabled">\u2713 Currently playing</div>'
+          : g.status === "ready" ? R("play:" + g.id, "\u25B6 Play this game")
+          : '<div class="soonnote">\uD83D\uDEA7 Coming soon</div>')
+        + R("backgames", "\u2039 All games");
+    }
+    else if (sheet.kind === "themes") {
+      body = T("Card theme") + '<div class="themegrid">' + THEMES.map((th) => {
+        const t = th.t, on = th.id === theme;
+        return `<button class="themeopt${on ? " on" : ""}" data-row="settheme:${th.id}">
+          <span class="swatch"><span class="sw-back" style="background:${t.backBg};border-color:${t.backBorder}"></span><span class="sw-face" style="background:${t.faceBg};border-color:${t.faceBorder};font-family:${t.font || "'Fraunces',serif"}"><b style="color:${t.black}">A</b><b style="color:${t.red}">\u2665</b></span></span>
+          <span class="themename">${esc(th.name)}</span></button>`;
+      }).join("") + "</div>";
+    }
     else if (sheet.kind === "addchips") {
       const amts = [100, 500, 1000];
       body = T("Add chips")
@@ -629,6 +779,13 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
 
   function handleRow(act) {
     const c = sheet.card, code = sheet.code, pid = sheet.pid;
+    if (act === "opengames") { sheet = { kind: "games" }; renderSheet(); return; }
+    if (act === "openthemes") { sheet = { kind: "themes" }; renderSheet(); return; }
+    if (act === "howto") { sheet = { kind: "game", gid: currentMode() }; renderSheet(); return; }
+    if (act.indexOf("game:") === 0) { sheet = { kind: "game", gid: act.slice(5) }; renderSheet(); return; }
+    if (act === "backgames") { sheet = { kind: "games" }; renderSheet(); return; }
+    if (act.indexOf("play:") === 0) { emit("setMode", { mode: act.slice(5) }); closeSheet(); return; }
+    if (act.indexOf("settheme:") === 0) { applyTheme(act.slice(9)); renderSheet(); return; }
     if (act.indexOf("dealTo:") === 0) { emit("dealToPlayer", { pid: act.slice(7) }); closeSheet(); render(); return; }
     if (act.indexOf("setN:") === 0) { dealN = parseInt(act.slice(5)) || 1; renderSheet(); return; }
     if (act.indexOf("dealNto:") === 0) { emit("dealMany", { pid: act.slice(8), n: dealN }); closeSheet(); render(); return; }
@@ -668,6 +825,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
   }
 
   window.addEventListener("resize", () => { if (me && state && !dragging) layoutHand(); });
+  applyTheme(theme);
   render();
 })();
   </script>

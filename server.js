@@ -69,6 +69,7 @@ const GRACE_MS = 3 * 60 * 1000; // keep a dropped player's seat (and an empty lo
 function buildView(lobby, cid) {
   return {
     code: lobby.code,
+    mode: lobby.mode || "freeform",
     deckCount: lobby.deck.length,
     table: lobby.table.map((c) => ({
       id: c.id,
@@ -163,7 +164,7 @@ io.on("connection", (socket) => {
   socket.on("create", ({ name, clientId } = {}, cb) => {
     const cid = clientId || genId();
     const code = genCode();
-    const lobby = { code, deck: makeDeck(), table: [], players: new Map(), order: [], maxZ: 0 };
+    const lobby = { code, mode: "freeform", deck: makeDeck(), table: [], players: new Map(), order: [], maxZ: 0 };
     lobbies.set(code, lobby);
     attach(lobby, cid, name);
     if (cb) cb({ ok: true, code });
@@ -250,9 +251,20 @@ io.on("connection", (socket) => {
     if (cur === next) p.hand = order.slice(); // accept only a true permutation of the current hand
   }));
 
+  /* ---- game mode ---- */
+  // Switch the table's active game. Implemented modes do real setup; others just
+  // record the mode (their engines arrive in later pushes). Poker init/teardown lives here.
+  socket.on("setMode", act1((l, _p, { mode } = {}) => {
+    const m = String(mode || "freeform");
+    if (m === l.mode) return;
+    if (l.mode === "poker") l.poker = null; // tear down previous
+    if (m === "poker") { if (!l.poker || !l.poker.on) l.poker = { on: true, sb: 5, bb: 10, buttonCid: null, hand: null }; }
+    l.mode = m;
+  }));
+
   /* ---- poker ---- */
-  socket.on("pokerOn", act((l) => { if (!l.poker || !l.poker.on) l.poker = { on: true, sb: 5, bb: 10, buttonCid: null, hand: null }; }));
-  socket.on("pokerOff", act((l) => { l.poker = null; }));
+  socket.on("pokerOn", act((l) => { if (!l.poker || !l.poker.on) l.poker = { on: true, sb: 5, bb: 10, buttonCid: null, hand: null }; l.mode = "poker"; }));
+  socket.on("pokerOff", act((l) => { l.poker = null; l.mode = "freeform"; }));
   socket.on("pokerAddChips", act1((l, p, { amount, pid } = {}) => {
     const a = Math.max(1, Math.min(100000, parseInt(amount, 10) || 0));
     if (!l.poker || !l.poker.on) return;
