@@ -55,11 +55,11 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
 .felt { flex:1; display:flex; flex-direction:column; padding:8px 12px; }
 .deck { position:absolute; top:12px; left:12px; z-index:1000; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; }
 .deckstack { width:56px; height:80px; border-radius:8px; position:relative;
-  background:repeating-linear-gradient(45deg,#7a1f1f,#7a1f1f 6px,#8c2727 6px,#8c2727 12px);
-  border:2px solid #e6c068; box-shadow:0 3px 0 #5d1717,0 7px 0 #4a1212,0 12px 18px rgba(0,0,0,.45);
+  background:var(--cd-back-bg,repeating-linear-gradient(45deg,#7a1f1f,#7a1f1f 6px,#8c2727 6px,#8c2727 12px));
+  border:2px solid var(--cd-back-border,#e6c068); box-shadow:0 3px 0 rgba(0,0,0,.32),0 7px 0 rgba(0,0,0,.26),0 12px 18px rgba(0,0,0,.45);
   display:flex; align-items:center; justify-content:center; }
-.deckstack::after { content:''; position:absolute; inset:6px; border:1px solid rgba(230,192,104,.5); border-radius:5px; }
-.deckcount { font-family:'Fraunces',serif; font-weight:700; font-size:20px; color:#fff5dd; z-index:1; text-shadow:0 2px 4px rgba(0,0,0,.6); }
+.deckstack::after { content:''; position:absolute; inset:6px; border:1px solid rgba(255,255,255,.3); border-radius:5px; }
+.deckcount { font-family:'Fraunces',serif; font-weight:700; font-size:18px; color:#fff5dd; z-index:1; background:rgba(0,0,0,.42); padding:1px 9px; border-radius:11px; }
 .decklabel { font-size:9px; letter-spacing:.16em; color:#9fc0ad; }
 .deck.shuf .deckstack { animation:shuf .55s ease; }
 @keyframes shuf { 0%{transform:translateX(0) rotate(0)} 25%{transform:translateX(-7px) rotate(-4deg)} 55%{transform:translateX(7px) rotate(4deg)} 80%{transform:translateX(-3px) rotate(-1deg)} 100%{transform:none} }
@@ -190,14 +190,50 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
 .shand { font-size:12px; color:#9fc0ad; min-width:96px; text-align:right; }
 
 /* sheet / toast */
-.scrim { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:flex-end; justify-content:center; z-index:50; }
-.sheet { width:100%; max-width:440px; background:#0e3b2b; border:1px solid rgba(217,179,92,.3); border-bottom:none; border-radius:20px 20px 0 0;
-  padding:18px 16px calc(18px + env(safe-area-inset-bottom)); box-shadow:0 -10px 40px rgba(0,0,0,.5); animation:rise .2s ease; }
+.scrim { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:flex-end; justify-content:center; z-index:9000; }
+.sheet { width:100%; max-width:440px; max-height:86vh; overflow-y:auto; -webkit-overflow-scrolling:touch; position:relative; background:#0e3b2b; border:1px solid rgba(217,179,92,.3); border-bottom:none; border-radius:20px 20px 0 0;
+  padding:0 16px calc(18px + env(safe-area-inset-bottom)); box-shadow:0 -10px 40px rgba(0,0,0,.5); animation:rise .2s ease; }
+.sheethead { position:sticky; top:0; z-index:3; display:flex; justify-content:flex-end; align-items:center; background:#0e3b2b; margin:0 -16px 2px; padding:10px 12px 6px; border-radius:20px 20px 0 0; }
+.sheetclose { width:34px; height:34px; border-radius:50%; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); color:#f3ead4; font-size:15px; line-height:1; cursor:pointer; }
 @keyframes rise { from{transform:translateY(30px)} to{transform:none} }
-.sheettitle { font-family:'Fraunces',serif; font-size:18px; margin:2px 4px 14px; color:#fff5dd; }
+.sheettitle { font-family:'Fraunces',serif; font-size:18px; margin:0 4px 14px; color:#fff5dd; }
 .row { display:block; width:100%; text-align:left; padding:15px 16px; border-radius:13px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.07); color:#f3ead4; font-family:inherit; font-size:15.5px; cursor:pointer; margin-bottom:9px; }
 .row.danger { color:#ffb4ab; }
-.toast { position:fixed; top:18px; left:50%; transform:translateX(-50%); z-index:60; background:rgba(8,41,30,.95); border:1px solid #d9b35c; color:#fff5dd; padding:10px 18px; border-radius:30px; font-size:13.5px; }
+.toast { position:fixed; top:18px; left:50%; transform:translateX(-50%); z-index:9500; background:rgba(8,41,30,.95); border:1px solid #d9b35c; color:#fff5dd; padding:10px 18px; border-radius:30px; font-size:13.5px; }
+
+/* ---------- Go Fish ---------- */
+.gfstats { font-size:13px; color:#cde0d4; margin-top:2px; }
+.bookranks { font-family:'Fraunces',serif; font-size:12px; color:#e6c068; margin-top:3px; letter-spacing:.04em; }
+.gflog { display:flex; flex-direction:column; gap:5px; width:100%; max-width:420px; margin-top:8px; }
+.logline { font-size:13px; color:#cde0d4; background:rgba(0,0,0,.2); border-radius:9px; padding:6px 11px; animation:rise .25s ease; }
+.gfhand { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:4px 0; }
+.gfcard { width:52px; height:74px; }
+.gfcard .face, .gfcard .back { width:100%; height:100%; }
+.gfaction { width:100%; display:flex; flex-direction:column; align-items:center; gap:9px; margin-top:6px; }
+.gfaction.idle { min-height:0; }
+.gflabel { font-size:13px; color:#cde0d4; text-align:center; }
+.rankrow { display:flex; flex-wrap:wrap; gap:7px; justify-content:center; }
+.rankchip { min-width:42px; padding:9px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05); color:#f3ead4; font-family:'Fraunces',serif; font-weight:700; font-size:16px; cursor:pointer; }
+.rankchip.on { background:linear-gradient(180deg,#e6c068,#cf9f3f); color:#3a2a06; border-color:#e6c068; }
+.targetrow { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+.gftarget { background:rgba(217,179,92,.16); border-color:#d9b35c; }
+
+/* ---------- Blackjack ---------- */
+.bjdealer { display:flex; flex-direction:column; align-items:center; gap:6px; margin:4px 0 10px; }
+.bjwho { font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:#9fc0ad; display:flex; align-items:center; gap:8px; }
+.bjcards { display:flex; gap:6px; justify-content:center; }
+.bjcards.small { gap:4px; }
+.bjcard { width:46px; height:64px; }
+.bjcard.sm { width:38px; height:54px; }
+.bjcard .face, .bjcard .back { width:100%; height:100%; }
+.bjt { font-family:'Fraunces',serif; font-weight:700; font-size:15px; color:#fff5dd; background:rgba(0,0,0,.3); padding:1px 9px; border-radius:11px; }
+.bjplayers { align-items:flex-start; }
+.pseat.me { border-color:rgba(230,192,104,.5); }
+.bjres { font-size:12px; font-weight:700; margin-top:4px; padding:3px 9px; border-radius:9px; display:inline-block; }
+.bjres.win, .bjres.blackjack { background:rgba(124,196,142,.18); color:#9be6a8; }
+.bjres.lose { background:rgba(255,120,110,.14); color:#ffb4ab; }
+.bjres.push { background:rgba(255,255,255,.08); color:#cde0d4; }
+.bjbet { flex-direction:column; gap:9px; }
   </style>
 </head>
 <body>
@@ -223,6 +259,8 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
   let raiseTo = 0;        // poker raise slider value
   let lastTurnKey = null; // resets the raise slider to the minimum each new turn
   let chipAmt = 500;      // chosen amount for the add-chips chooser
+  let askRank = null;     // Go Fish: the rank currently selected to ask for
+  let betAmt = 0;         // Blackjack: chosen bet
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   /* ---- card themes ----
@@ -259,7 +297,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
       rules: ["An open sandbox \u2014 no rules are enforced.", "Tap the deck to deal to yourself, the table, or other players.", "Tap a table card to flip it, peek privately, or take it into your hand.", "Drag cards to arrange them; drag a hand card onto the table to play it."] },
     { id: "poker", name: "Texas Hold'em", cat: "Casino", players: "2\u20138", status: "ready",
       rules: ["Everyone gets 2 private hole cards.", "Make your best 5-card hand from your 2 cards plus 5 shared community cards.", "Betting rounds: pre-flop, flop (3 cards), turn (1), river (1).", "On your turn: check, call, raise, or fold. Small and big blinds force the early action.", "Best hand at showdown wins the pot. Ranking: high card, pair, two pair, trips, straight, flush, full house, quads, straight flush."] },
-    { id: "blackjack", name: "Blackjack", cat: "Casino", players: "1\u20136", status: "soon",
+    { id: "blackjack", name: "Blackjack", cat: "Casino", players: "1\u20136", status: "ready",
       rules: ["Beat the dealer by getting closer to 21 without going over.", "Number cards score their value, J/Q/K are 10, an Ace is 1 or 11.", "Hit to draw another card, stand to hold. Go over 21 and you bust.", "The dealer draws to 16 and stands on 17.", "A natural blackjack (Ace + ten-card) pays extra."] },
     { id: "hearts", name: "Hearts", cat: "Trick-taking", players: "4", status: "soon",
       rules: ["Avoid taking points: every heart is 1 point, the Queen of Spades is 13.", "Follow the suit that was led if you can; otherwise play anything.", "The highest card of the led suit wins the trick \u2014 and any points in it.", "Pass 3 cards to an opponent at the start of each hand.", "Lowest score wins. Take ALL the points ('shoot the moon') to hand 26 to everyone else."] },
@@ -271,7 +309,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
       rules: ["Be the first to shed all your cards.", "Play singles, pairs, or 5-card poker hands that beat the previous play.", "2 is the highest rank; suits rank \u2666 < \u2663 < \u2665 < \u2660.", "Pass if you can't or won't beat the last play; the round resets once everyone passes.", "Whoever holds the 3\u2666 leads the very first round."] },
     { id: "crazy8s", name: "Crazy Eights", cat: "Family", players: "2\u20136", status: "soon",
       rules: ["Match the top discard by either rank or suit.", "Can't play? Draw cards until you can.", "Eights are wild \u2014 play one any time and name the next suit.", "First to empty their hand wins.", "It's the family ancestor of UNO."] },
-    { id: "gofish", name: "Go Fish", cat: "Family", players: "2\u20136", status: "soon",
+    { id: "gofish", name: "Go Fish", cat: "Family", players: "2\u20136", status: "ready",
       rules: ["Collect sets of four of a kind.", "On your turn, ask another player for a rank you already hold.", "If they have it they hand it over, and you ask again.", "If they don't \u2014 'Go Fish' \u2014 draw from the pool and your turn ends.", "Most completed sets when the cards run out wins."] },
     { id: "war", name: "War", cat: "Family", players: "2", status: "soon",
       rules: ["Split the deck evenly, kept face-down.", "Both players flip their top card; the higher card wins both.", "A tie means 'war': lay cards down and flip again to settle it.", "Win every card to win the game.", "Pure luck \u2014 a perfect quick filler."] },
@@ -281,6 +319,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
       rules: ["A solo game you play at your own table.", "Build the four foundations up by suit, from Ace to King.", "On the tableau, stack cards down in alternating colours.", "Turn cards from the stock when you're stuck.", "Move every card to the foundations to win."] },
   ];
   const gameById = (id) => GAMES.find((g) => g.id === id) || GAMES[0];
+  const playersLabel = (g) => g.players === "1" ? "1 player" : g.players + " players";
   const currentMode = () => (state && state.mode) ? state.mode : ((state && state.poker && state.poker.on) ? "poker" : "freeform");
 
   // stable per-device id so a reconnect restores the same seat + hand
@@ -343,6 +382,8 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
     if (!state) { app.innerHTML = '<div class="home"><div class="home-inner"><div class="suits">\u2660 \u2665 \u2666 \u2663</div><p class="sub">Connecting\u2026</p></div></div>'; return; }
     const mode = currentMode();
     if (mode === "poker") renderPoker();
+    else if (mode === "gofish") renderGoFish();
+    else if (mode === "blackjack") renderBlackjack();
     else if (mode === "freeform") renderTable();
     else renderComingSoon(mode);
     if (sheet) renderSheet();
@@ -395,7 +436,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
         <div class="sooncard">
           <div class="suits small">\u2660 \u2665 \u2666 \u2663</div>
           <h2 class="soontitle">${esc(g.name)}</h2>
-          <div class="gmeta2">${g.cat} \u00b7 ${g.players} players</div>
+          <div class="gmeta2">${g.cat} \u00b7 ${playersLabel(g)}</div>
           <p class="soonmsg">This game is in the works. Here's how it'll play:</p>
           <ol class="rules">${g.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol>
           <button class="btn primary" id="backff">\u2039 Back to the table</button>
@@ -708,6 +749,125 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
     }
   }
 
+  /* ---------------- Go Fish UI ---------------- */
+  const rlabel = (r) => RLAB[r] || r;
+  function renderGoFish() {
+    const gf = state.gofish;
+    const head = `<header class="top"><div class="codebox" id="codebox"><span class="codelabel">TABLE CODE</span><span class="codeval">${esc(state.code)}</span><span class="copy">tap to copy</span></div><button class="iconbtn" id="menu">\u22EF</button></header>`;
+    const wireTop = () => {
+      const $ = (id) => document.getElementById(id);
+      $("codebox").onclick = () => { navigator.clipboard && navigator.clipboard.writeText(state.code); toast("Code copied"); };
+      $("menu").onclick = () => { sheet = { kind: "menu" }; renderSheet(); };
+    };
+    if (!gf || !gf.started || gf.phase === "over") {
+      const over = gf && gf.results;
+      const canStart = state.players.length >= 2;
+      let inner;
+      if (over) {
+        const stand = gf.results.standings.map((s) => `<div class="showrow"><span class="sn">${esc(s.name)}</span><span class="shand">${s.books} book${s.books === 1 ? "" : "s"}</span></div>`).join("");
+        const win = gf.results.winners.map((c) => { const p = gf.players.find((x) => x.id === c); return esc(p ? p.name : ""); }).join(" & ");
+        inner = `<div class="sooncard"><h2 class="soontitle">\uD83C\uDFC6 ${win}</h2><div class="showlist">${stand}</div>${canStart ? '<button class="btn primary" id="gfstart">New game</button>' : '<div class="hint">Need 2+ players</div>'}</div>`;
+      } else {
+        inner = `<div class="sooncard"><div class="suits small">\u2660 \u2665 \u2666 \u2663</div><h2 class="soontitle">Go Fish</h2><p class="soonmsg">${canStart ? "Everyone in? Deal to begin." : "Waiting for players \u2014 need at least 2."}</p>${canStart ? '<button class="btn primary" id="gfstart">Deal &amp; start</button>' : ""}</div>`;
+      }
+      app.innerHTML = `<div class="table">${head}<div class="felt soonfelt">${inner}</div></div>`;
+      wireTop();
+      const gs = document.getElementById("gfstart"); if (gs) gs.onclick = () => emit("gofishStart");
+      return;
+    }
+    if (!gf.myTurn) askRank = null;
+    const turnName = (gf.players.find((p) => p.isTurn) || {}).name;
+    const playersHtml = gf.players.map((p) => `<div class="pseat${p.isTurn ? " turn" : ""}${p.away ? " folded" : ""}"><div class="pseat-top"><span class="pn">${esc(p.name)}${p.me ? " (you)" : ""}</span></div><div class="gfstats">\uD83C\uDCA0 ${p.handCount} \u00b7 \uD83D\uDCDA ${p.booksCount}</div>${p.books.length ? `<div class="bookranks">${p.books.map((r) => rlabel(r)).join(" ")}</div>` : ""}</div>`).join("");
+    const logHtml = (gf.log || []).map((l) => `<div class="logline">${esc(l)}</div>`).join("");
+    const myHandHtml = gf.myHand.map((code) => `<div class="gfcard">${cardInner(code, true)}</div>`).join("");
+    let action;
+    if (gf.myTurn) {
+      const ranks = gf.myRanks.map((r) => `<button class="rankchip${askRank === r ? " on" : ""}" data-gfrank="${r}">${rlabel(r)}</button>`).join("");
+      const targets = gf.players.filter((p) => !p.me && p.handCount > 0).map((p) => `<button class="pbtn gftarget" data-gftarget="${p.id}">${esc(p.name)}</button>`).join("");
+      action = `<div class="gfaction"><div class="gflabel">Your turn \u2014 pick a rank you hold, then tap who to ask</div><div class="rankrow">${ranks}</div><div class="targetrow">${targets}</div></div>`;
+    } else {
+      action = `<div class="gfaction idle"><span class="hint">${turnName ? esc(turnName) + " is asking\u2026" : ""}</span></div>`;
+    }
+    app.innerHTML = `<div class="table">${head}
+      <div class="players pokerplayers">${playersHtml}</div>
+      <div class="felt pokerfelt">
+        <div class="pokerinfo">Pool: ${gf.poolCount} card${gf.poolCount === 1 ? "" : "s"}</div>
+        <div class="gflog">${logHtml}</div>
+      </div>
+      <div class="hand pokerhand">
+        <div class="handlabel">YOUR HAND <span>${gf.myHand.length} cards \u00b7 only you can see these</span></div>
+        <div class="gfhand">${myHandHtml || '<span class="emptyhand">No cards</span>'}</div>
+        ${action}
+      </div></div>`;
+    wireTop();
+    app.querySelectorAll("[data-gfrank]").forEach((b) => b.onclick = () => { askRank = b.getAttribute("data-gfrank"); renderGoFish(); });
+    app.querySelectorAll("[data-gftarget]").forEach((b) => b.onclick = () => {
+      if (!askRank) { toast("Pick a rank first"); return; }
+      emit("gofishAsk", { target: b.getAttribute("data-gftarget"), rank: askRank }); askRank = null;
+    });
+  }
+
+  /* ---------------- Blackjack UI ---------------- */
+  function renderBlackjack() {
+    const bj = state.blackjack;
+    const head = `<header class="top"><div class="codebox" id="codebox"><span class="codelabel">TABLE CODE</span><span class="codeval">${esc(state.code)}</span><span class="copy">tap to copy</span></div><button class="iconbtn" id="menu">\u22EF</button></header>`;
+    if (!bj) { app.innerHTML = `<div class="table">${head}<div class="felt soonfelt"><div class="sooncard"><div class="hint">Starting\u2026</div></div></div></div>`; const $ = (id) => document.getElementById(id); $("codebox").onclick = () => toast("Code copied"); $("menu").onclick = () => { sheet = { kind: "menu" }; renderSheet(); }; return; }
+    const dealerCards = bj.dealer.cards.map((c) => `<div class="bjcard">${cardInner(c || "", c != null)}</div>`).join("");
+    const dealerTotal = bj.dealer.revealed && bj.dealer.total != null ? `<span class="bjt">${bj.dealer.total}</span>` : "";
+    const dealerHtml = `<div class="bjdealer"><div class="bjwho">Dealer ${dealerTotal}</div><div class="bjcards">${dealerCards || '<span class="hint">\u2014</span>'}</div></div>`;
+    const playersHtml = bj.players.map((p) => {
+      if (bj.phase === "betting") {
+        return `<div class="pseat${p.me ? " me" : ""}"><div class="pseat-top"><span class="pn">${esc(p.name)}${p.me ? " (you)" : ""}</span></div><div class="pchips">\uD83E\uDE99 ${p.chips}</div>${p.bet ? `<div class="pbet">bet ${p.bet}</div>` : ""}</div>`;
+      }
+      const cards = (p.cards || []).map((c) => `<div class="bjcard sm">${cardInner(c, true)}</div>`).join("");
+      const res = p.result ? `<div class="bjres ${p.result}">${p.result === "blackjack" ? "BLACKJACK" : p.result.toUpperCase()}${p.payout ? " +" + p.payout : ""}</div>` : "";
+      const status = !p.result ? (p.busted ? "bust" : (p.bj ? "blackjack!" : (p.doubled ? "doubled" : (p.stood ? "stand" : "")))) : "";
+      return `<div class="pseat${p.isTurn ? " turn" : ""}"><div class="pseat-top"><span class="pn">${esc(p.name)}${p.me ? " (you)" : ""}</span><span class="bjt">${p.total}</span></div><div class="bjcards small">${cards}</div><div class="pchips">\uD83E\uDE99 ${p.chips} \u00b7 bet ${p.bet}</div>${status ? `<div class="pstatus">${status}</div>` : ""}${res}</div>`;
+    }).join("");
+    let action;
+    if (bj.phase === "betting") {
+      const max = bj.myChips, min = Math.min(bj.minBet, max);
+      if (betAmt < min) betAmt = min; if (betAmt > max) betAmt = max;
+      const slider = (max >= min && max > 0)
+        ? `<div class="raisebox"><div class="rtop"><span class="rlabel">Your bet</span><span class="ramt" id="betamt">${betAmt}</span></div><input type="range" class="rslider" id="betslider" min="${min}" max="${max}" step="${bj.minBet}" value="${betAmt}"><div class="rpresets"><button class="rpreset" data-bp="min">Min</button><button class="rpreset" data-bp="half">\u00BD</button><button class="rpreset" data-bp="max">Max</button><button class="pbtn raise" id="placebet">Bet ${betAmt}</button></div></div>`
+        : '<div class="hint">No chips yet \u2014 add some below.</div>';
+      action = `<div class="actionbar bjbet">${slider}${bj.myBet ? `<div class="hint">Your bet is in: ${bj.myBet} \u2014 adjust above to change.</div>` : ""}<div class="actrow">${bj.canDeal ? '<button class="pbtn call" id="bjdeal">Deal</button>' : '<span class="hint">Place a bet, then Deal</span>'}</div></div><button class="pbtn add" id="addchips">\uFF0B Add chips</button>`;
+    } else if (bj.phase === "done") {
+      action = `<div class="actionbar"><div class="actrow"><button class="pbtn call" id="bjnew">New round</button></div></div><button class="pbtn add" id="addchips">\uFF0B Add chips</button>`;
+    } else if (bj.myTurn && bj.legal) {
+      const L = bj.legal;
+      action = `<div class="actionbar"><div class="actrow"><button class="pbtn call" id="bjhit">Hit</button><button class="pbtn" id="bjstand">Stand</button>${L.canDouble ? '<button class="pbtn allin" id="bjdouble">Double</button>' : ""}</div></div>`;
+    } else {
+      const t = (bj.players.find((p) => p.isTurn) || {}).name;
+      action = `<div class="actionbar idle"><span class="hint">${bj.phase === "dealer" ? "Dealer playing\u2026" : (t ? esc(t) + " deciding\u2026" : "")}</span></div>`;
+    }
+    app.innerHTML = `<div class="table">${head}
+      <div class="felt pokerfelt">
+        <div class="pokerinfo">Blackjack \u00b7 min bet ${bj.minBet}</div>
+        ${dealerHtml}
+        <div class="players pokerplayers bjplayers">${playersHtml}</div>
+      </div>
+      <div class="hand pokerhand">${action}</div></div>`;
+    const $ = (id) => document.getElementById(id);
+    $("codebox").onclick = () => { navigator.clipboard && navigator.clipboard.writeText(state.code); toast("Code copied"); };
+    $("menu").onclick = () => { sheet = { kind: "menu" }; renderSheet(); };
+    if ($("addchips")) $("addchips").onclick = () => { sheet = { kind: "addchips" }; renderSheet(); };
+    if ($("bjdeal")) $("bjdeal").onclick = () => emit("bjDeal");
+    if ($("bjnew")) $("bjnew").onclick = () => emit("bjStart");
+    if ($("bjhit")) $("bjhit").onclick = () => emit("bjAction", { action: "hit" });
+    if ($("bjstand")) $("bjstand").onclick = () => emit("bjAction", { action: "stand" });
+    if ($("bjdouble")) $("bjdouble").onclick = () => emit("bjAction", { action: "double" });
+    if ($("placebet")) $("placebet").onclick = () => emit("bjBet", { amount: betAmt });
+    const sl = $("betslider");
+    if (sl) {
+      const step = bj.minBet, max = bj.myChips, min = Math.min(bj.minBet, max);
+      const clamp = (x) => Math.max(min, Math.min(max, Math.round(x / step) * step));
+      const setVal = (v) => { betAmt = clamp(v); sl.value = betAmt; const a = $("betamt"); if (a) a.textContent = betAmt; const pb = $("placebet"); if (pb) pb.textContent = "Bet " + betAmt; };
+      sl.oninput = () => setVal(parseInt(sl.value, 10) || min);
+      document.querySelectorAll("[data-bp]").forEach((b) => b.onclick = () => { const k = b.getAttribute("data-bp"); setVal(k === "min" ? min : k === "max" ? max : Math.round(max / 2)); });
+    }
+  }
+
   function renderSheet() {
     let body = "";
     const T = (t) => `<h3 class="sheettitle">${t}</h3>`;
@@ -741,13 +901,13 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
         body += gs.map((g) => {
           const cur = g.id === currentMode();
           const tag = g.status === "ready" ? `<span class="tag ready">${cur ? "Playing" : "Play"}</span>` : '<span class="tag soon">Soon</span>';
-          return `<button class="row gamerow" data-row="game:${g.id}"><span class="grow-main"><span class="gname">${esc(g.name)}</span><span class="gmeta">${g.players} players</span></span>${tag}</button>`;
+          return `<button class="row gamerow" data-row="game:${g.id}"><span class="grow-main"><span class="gname">${esc(g.name)}</span><span class="gmeta">${playersLabel(g)}</span></span>${tag}</button>`;
         }).join("");
       }
     }
     else if (sheet.kind === "game") {
       const g = gameById(sheet.gid); const cur = g.id === currentMode();
-      body = T(esc(g.name)) + `<div class="gmeta2">${g.cat} \u00b7 ${g.players} players</div>`
+      body = T(esc(g.name)) + `<div class="gmeta2">${g.cat} \u00b7 ${playersLabel(g)}</div>`
         + `<ol class="rules">${g.rules.map((r) => `<li>${esc(r)}</li>`).join("")}</ol>`
         + (cur ? '<div class="row disabled">\u2713 Currently playing</div>'
           : g.status === "ready" ? R("play:" + g.id, "\u25B6 Play this game")
@@ -766,13 +926,14 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
       const amts = [100, 500, 1000];
       body = T("Add chips")
         + '<div class="countrow">' + amts.map((a) => `<button class="countbtn${a === chipAmt ? " on" : ""}" data-row="setchip:${a}">${a}</button>`).join("") + '</div>'
-        + ((state.poker && state.poker.players) || []).map((p) => R("givechips:" + p.id, "\uD83E\uDE99 Give " + chipAmt + " to " + esc(p.name) + (p.me ? " (you)" : ""))).join("");
+        + (((state.poker && state.poker.players) || (state.blackjack && state.blackjack.players) || state.players) || []).map((p) => R("givechips:" + p.id, "\uD83E\uDE99 Give " + chipAmt + " to " + esc(p.name) + (p.me ? " (you)" : ""))).join("");
     }
 
     let scrim = document.getElementById("scrim");
     if (!scrim) { scrim = document.createElement("div"); scrim.id = "scrim"; scrim.className = "scrim"; document.body.appendChild(scrim); }
-    scrim.innerHTML = `<div class="sheet" id="sheetinner">${body}</div>`;
+    scrim.innerHTML = `<div class="sheet" id="sheetinner"><div class="sheethead"><button class="sheetclose" id="sheetclose" aria-label="Close">\u2715</button></div>${body}</div>`;
     scrim.onclick = (e) => { if (e.target === scrim) closeSheet(); };
+    const cb = document.getElementById("sheetclose"); if (cb) cb.onclick = closeSheet;
     scrim.querySelectorAll("[data-row]").forEach((el) => (el.onclick = () => handleRow(el.dataset.row)));
   }
   function closeSheet() { sheet = null; const s = document.getElementById("scrim"); if (s) s.remove(); }
@@ -790,10 +951,10 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
     if (act.indexOf("setN:") === 0) { dealN = parseInt(act.slice(5)) || 1; renderSheet(); return; }
     if (act.indexOf("dealNto:") === 0) { emit("dealMany", { pid: act.slice(8), n: dealN }); closeSheet(); render(); return; }
     if (act === "dealMulti") { sheet = { kind: "dealN" }; renderSheet(); return; }
-    if (act.indexOf("addchips:") === 0) { emit("pokerAddChips", { amount: parseInt(act.slice(9)) || 100 }); closeSheet(); render(); return; }
+    if (act.indexOf("addchips:") === 0) { emit("addChips", { amount: parseInt(act.slice(9)) || 100 }); closeSheet(); render(); return; }
     if (act === "openchips") { sheet = { kind: "addchips" }; renderSheet(); return; }
     if (act.indexOf("setchip:") === 0) { chipAmt = parseInt(act.slice(8)) || 500; renderSheet(); return; }
-    if (act.indexOf("givechips:") === 0) { emit("pokerAddChips", { amount: chipAmt, pid: act.slice(10) }); closeSheet(); render(); return; }
+    if (act.indexOf("givechips:") === 0) { emit("addChips", { amount: chipAmt, pid: act.slice(10) }); closeSheet(); render(); return; }
     const map = {
       shuffle: () => { emit("shuffle"); shuf = true; },
       dealMe: () => emit("dealToMe"),

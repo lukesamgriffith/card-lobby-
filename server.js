@@ -19,6 +19,8 @@ const http = require("http");
 const path = require("path");
 const { Server } = require("socket.io");
 const poker = require("./poker");
+const gofish = require("./gofish");
+const blackjack = require("./blackjack");
 
 const app = express();
 const server = http.createServer(app);
@@ -84,6 +86,8 @@ function buildView(lobby, cid) {
       .map((id) => ({ id, name: lobby.players.get(id).name, count: lobby.players.get(id).hand.length, me: id === cid, away: !lobby.players.get(id).connected })),
     myHand: lobby.players.get(cid) ? lobby.players.get(cid).hand : [],
     poker: pokerView(lobby, cid),
+    gofish: (lobby.mode === "gofish") ? gofishView(lobby, cid) : null,
+    blackjack: (lobby.mode === "blackjack") ? bjView(lobby, cid) : null,
   };
 }
 function pokerView(lobby, cid) {
@@ -120,6 +124,62 @@ function pokerView(lobby, cid) {
   }
   return v;
 }
+
+const RANK_ORDER = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K"];
+const SUIT_ORDER = ["S", "H", "C", "D"];
+function cardSort(a, b) {
+  const ra = RANK_ORDER.indexOf(a.slice(0, -1)), rb = RANK_ORDER.indexOf(b.slice(0, -1));
+  return ra !== rb ? ra - rb : SUIT_ORDER.indexOf(a.slice(-1)) - SUIT_ORDER.indexOf(b.slice(-1));
+}
+
+function gofishView(lobby, cid) {
+  const gf = lobby.gofish;
+  if (!gf) return { on: true, started: false };
+  const players = gf.order.filter((id) => lobby.players.has(id)).map((id) => ({
+    id, name: lobby.players.get(id).name, me: id === cid, away: !lobby.players.get(id).connected,
+    handCount: gf.hands[id] ? gf.hands[id].length : 0,
+    books: gf.books[id] ? gf.books[id].slice() : [], booksCount: gf.books[id] ? gf.books[id].length : 0,
+    isTurn: gf.turn === id,
+  }));
+  const myHand = gf.hands[cid] ? gf.hands[cid].slice().sort(cardSort) : [];
+  const myRanks = [...new Set(myHand.map((c) => c.slice(0, -1)))];
+  return {
+    on: true, started: true, phase: gf.phase, poolCount: gf.deck.length, turn: gf.turn,
+    players, myHand, myRanks, myTurn: gf.turn === cid, inGame: !!gf.hands[cid],
+    log: gf.log.slice(-5), results: gf.phase === "over" ? gf.results : null,
+  };
+}
+
+function bjView(lobby, cid) {
+  const bj = lobby.bj;
+  if (!bj) return null;
+  const me = lobby.players.get(cid);
+  const dealerCards = bj.dealer.cards.map((c, i) => (bj.dealer.revealed || i === 0) ? c : null);
+  const dealer = { cards: dealerCards, revealed: bj.dealer.revealed, total: bj.dealer.revealed ? blackjack.handValue(bj.dealer.cards).total : null };
+  let players;
+  if (bj.phase === "betting") {
+    players = lobby.order.filter((id) => { const p = lobby.players.get(id); return p && p.connected; }).map((id) => ({
+      id, name: lobby.players.get(id).name, me: id === cid, away: false, chips: lobby.players.get(id).chips, bet: bj.bets[id] || 0,
+    }));
+  } else {
+    players = bj.order.filter((id) => lobby.players.has(id)).map((id) => {
+      const h = bj.hands[id]; const v = blackjack.handValue(h.cards);
+      return { id, name: lobby.players.get(id).name, me: id === cid, away: !lobby.players.get(id).connected,
+        chips: lobby.players.get(id).chips, bet: h.bet, cards: h.cards.slice(), total: v.total, soft: v.soft,
+        busted: h.busted, stood: h.stood, doubled: h.doubled, bj: h.bj, isTurn: bj.toAct === id,
+        result: h.result, payout: h.payout };
+    });
+  }
+  const h = bj.hands[cid];
+  const legal = bj.toAct === cid && h ? { canHit: true, canStand: true, canDouble: h.cards.length === 2 && me.chips >= h.bet } : null;
+  return {
+    on: true, phase: bj.phase, minBet: bj.minBet, dealer, players,
+    myChips: me ? me.chips : 0, myBet: bj.bets[cid] || 0,
+    canBet: bj.phase === "betting", canDeal: bj.phase === "betting" && Object.values(bj.bets).some((b) => b > 0),
+    myTurn: bj.toAct === cid, legal, inRound: bj.phase !== "betting" && !!h,
+    results: bj.phase === "done" ? bj.results : null,
+  };
+}
 function broadcast(lobby) {
   for (const p of lobby.players.values()) {
     if (p.connected && p.sockId) io.to(p.sockId).emit("state", buildView(lobby, p._cid));
@@ -130,10 +190,19 @@ function lobbyOf(socket) {
   return code ? lobbies.get(code) : null;
 }
 
+/* return any blackjack stakes to players (used on teardown / mode switch) */
+function refundBets(lobby) {
+  const bj = lobby.bj; if (!bj) return;
+  if (bj.phase === "betting") { for (const cid of Object.keys(bj.bets)) { const p = lobby.players.get(cid); if (p) p.chips += bj.bets[cid]; } }
+  else if (bj.phase === "playing" || bj.phase === "dealer") { for (const cid of bj.order) { const p = lobby.players.get(cid); if (p && bj.hands[cid]) p.chips += bj.hands[cid].bet; } }
+}
+
 /* remove a player for good (explicit leave, or grace expired): return their cards, drop the seat */
 function purgePlayer(lobby, cid) {
   const p = lobby.players.get(cid);
   if (!p) return;
+  if (lobby.mode === "gofish" && lobby.gofish) gofish.removePlayer(lobby, cid);
+  if (lobby.mode === "blackjack" && lobby.bj) blackjack.onLeave(lobby, cid);
   lobby.deck.push(...p.hand);
   lobby.players.delete(cid);
   lobby.order = lobby.order.filter((id) => id !== cid);
@@ -258,8 +327,28 @@ io.on("connection", (socket) => {
     const m = String(mode || "freeform");
     if (m === l.mode) return;
     if (l.mode === "poker") l.poker = null; // tear down previous
+    if (l.mode === "gofish") l.gofish = null;
+    if (l.mode === "blackjack") { refundBets(l); l.bj = null; }
     if (m === "poker") { if (!l.poker || !l.poker.on) l.poker = { on: true, sb: 5, bb: 10, buttonCid: null, hand: null }; }
+    if (m === "blackjack") blackjack.startRound(l); // open a betting round
     l.mode = m;
+  }));
+
+  /* ---- Go Fish ---- */
+  socket.on("gofishStart", act((l) => { if (l.mode === "gofish") gofish.startGame(l); }));
+  socket.on("gofishAsk", act1((l, _p, { target, rank } = {}) => { if (l.mode === "gofish" && l.gofish) gofish.ask(l, socket.data.cid, target, rank); }));
+
+  /* ---- Blackjack ---- */
+  socket.on("bjStart", act((l) => { if (l.mode === "blackjack") blackjack.startRound(l); }));
+  socket.on("bjBet", act1((l, _p, { amount } = {}) => { if (l.mode === "blackjack" && l.bj) blackjack.placeBet(l, socket.data.cid, parseInt(amount, 10) || 0); }));
+  socket.on("bjDeal", act((l) => { if (l.mode === "blackjack" && l.bj) blackjack.deal(l); }));
+  socket.on("bjAction", act1((l, _p, { action } = {}) => { if (l.mode === "blackjack" && l.bj) blackjack.action(l, socket.data.cid, action); }));
+
+  /* chips work across chip games (poker, blackjack) */
+  socket.on("addChips", act1((l, p, { amount, pid } = {}) => {
+    const a = Math.max(1, Math.min(100000, parseInt(amount, 10) || 0));
+    const t = pid && l.players.has(pid) ? l.players.get(pid) : p;
+    t.chips += a;
   }));
 
   /* ---- poker ---- */
@@ -317,6 +406,8 @@ io.on("connection", (socket) => {
     if (!p || p.sockId !== socket.id) return; // a newer socket already took over this seat
     p.connected = false; p.sockId = null;
     if (lobby.poker && lobby.poker.hand) poker.foldOnLeave(lobby, cid); // don't stall the table mid-hand
+    if (lobby.mode === "gofish" && lobby.gofish) gofish.skipTurn(lobby, cid);
+    if (lobby.mode === "blackjack" && lobby.bj) blackjack.onLeave(lobby, cid);
     broadcast(lobby);
     setTimeout(() => {
       const lb = lobbies.get(lobby.code);
