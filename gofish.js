@@ -13,7 +13,14 @@ const { makeDeck, shuffle } = require("./poker");
 
 const rankOf = (code) => code.slice(0, -1);
 const RANK_NAME = { A: "Aces", T: "10s", J: "Jacks", Q: "Queens", K: "Kings" };
+const RANK_ONE = { A: "Ace", T: "10", J: "Jack", Q: "Queen", K: "King" };
 const rankPlural = (r) => RANK_NAME[r] || (r + "s");
+const rankSingular = (r) => RANK_ONE[r] || r;
+
+// paced beats so the table doesn't jump instantly (overridable for fast tests)
+const PASS_MS = Number(process.env.GF_PASS_MS) >= 0 ? Number(process.env.GF_PASS_MS) : 1900;
+const AGAIN_MS = Number(process.env.GF_AGAIN_MS) >= 0 ? Number(process.env.GF_AGAIN_MS) : 1200;
+const notify = (lobby) => { if (typeof lobby.notify === "function") lobby.notify(); };
 
 function seated(lobby) {
   return lobby.order.filter((cid) => { const p = lobby.players.get(cid); return p && p.connected; });
@@ -100,6 +107,7 @@ function finalize(lobby, gf) {
 function ask(lobby, cid, target, rank) {
   const gf = lobby.gofish;
   if (!gf || gf.phase !== "play") return { error: "No game in progress." };
+  if (gf.locked) return { error: "Hold on\u2026" };
   if (gf.turn !== cid) return { error: "Not your turn." };
   if (!gf.hands[target]) return { error: "No such player." };
   if (target === cid) return { error: "Ask someone else." };
@@ -112,22 +120,31 @@ function ask(lobby, cid, target, rank) {
   if (matches.length) {
     gf.hands[target] = gf.hands[target].filter((c) => rankOf(c) !== rank);
     gf.hands[cid].push(...matches);
-    logPush(gf, asker + " got " + matches.length + " " + rankPlural(rank) + " from " + tgt + " \u2014 go again!");
+    logPush(gf, asker + " asked " + tgt + " for " + rankPlural(rank) + " and got " + matches.length + " \u2014 go again!");
     pullBooks(lobby, gf, cid);
     // turn stays with asker
   } else {
-    logPush(gf, tgt + ": \u201CGo Fish!\u201D \u2014 " + asker + " draws.");
+    logPush(gf, asker + " asked " + tgt + " for " + rankPlural(rank) + " \u2014 Go Fish!");
     if (gf.deck.length) {
       const drawn = gf.deck.pop();
       gf.hands[cid].push(drawn);
       pullBooks(lobby, gf, cid);
-      if (rankOf(drawn) === rank) logPush(gf, asker + " fished a " + rankPlural(rank).replace(/s$/, "") + " \u2014 go again!");
+      if (rankOf(drawn) === rank) logPush(gf, asker + " fished the " + rankSingular(rank) + " they wanted \u2014 go again!");
       else advanceTurn(lobby, gf, cid);
     } else {
       advanceTurn(lobby, gf, cid); // empty pool, nothing to draw
     }
   }
   ensureCanPlay(lobby, gf);
+
+  // hold the table on this beat for a moment so everyone can read what happened
+  if (gf.phase === "play" && typeof lobby.notify === "function") {
+    const wentAgain = gf.turn === cid;
+    gf.locked = true;
+    setTimeout(() => {
+      if (lobby.gofish === gf && gf.phase === "play") { gf.locked = false; notify(lobby); }
+    }, wentAgain ? AGAIN_MS : PASS_MS);
+  }
   return { ok: true };
 }
 

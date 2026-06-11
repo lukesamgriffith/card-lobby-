@@ -21,11 +21,13 @@ const { Server } = require("socket.io");
 const poker = require("./poker");
 const gofish = require("./gofish");
 const blackjack = require("./blackjack");
+const { mountPWA } = require("./pwa");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
+mountPWA(app); // /manifest.webmanifest + app icons (install / add to home screen)
 app.get("/", (_req, res) => { res.set("Cache-Control", "no-store"); res.sendFile(path.join(__dirname, "index.html")); });
 app.get("/healthz", (_req, res) => res.send("ok"));
 
@@ -145,7 +147,7 @@ function gofishView(lobby, cid) {
   const myRanks = [...new Set(myHand.map((c) => c.slice(0, -1)))];
   return {
     on: true, started: true, phase: gf.phase, poolCount: gf.deck.length, turn: gf.turn,
-    players, myHand, myRanks, myTurn: gf.turn === cid, inGame: !!gf.hands[cid],
+    players, myHand, myRanks, myTurn: gf.turn === cid, inGame: !!gf.hands[cid], locked: !!gf.locked,
     log: gf.log.slice(-5), results: gf.phase === "over" ? gf.results : null,
   };
 }
