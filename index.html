@@ -466,6 +466,28 @@ body::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:
   border:1px solid var(--rail); box-shadow:inset 0 1px 0 var(--surface-hi), 0 10px 34px rgba(0,0,0,.4); }
 .soontitle { color:#fff5dd; }
 .soonmsg { color:var(--ink-dim); }
+
+/* ---- Gin Rummy board + drag ---- */
+.ginfelt { gap:12px; padding-top:6px; }
+.ginboard { display:flex; gap:26px; justify-content:center; align-items:flex-start; margin:8px 0 4px; }
+.ginpile { display:flex; flex-direction:column; align-items:center; gap:7px; }
+.ginpilecard { position:relative; width:60px; height:84px; border-radius:8px; display:flex; align-items:center; justify-content:center; }
+.ginpilecard .face, .ginpilecard .back { width:100%; height:100%; }
+.gindiscard.target .ginpilecard { box-shadow:0 0 0 2px var(--surface-line); }
+.ginpile.armable { cursor:pointer; }
+.ginpile.armable .ginpilecard { box-shadow:0 0 0 2px var(--accent-soft); }
+.ginpile.armed .ginpilecard { box-shadow:0 0 0 3px var(--accent), 0 8px 20px rgba(0,0,0,.45); transform:translateY(-4px); }
+.ginpile.drophint .ginpilecard { box-shadow:0 0 0 3px var(--accent); transform:translateY(-3px); }
+.pilelbl { font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-faint); }
+.ginhand { min-height:88px; padding:8px 6px; border-radius:14px; transition:background .12s, box-shadow .12s; touch-action:pan-y; }
+.ginhand.drophint { background:var(--accent-soft); box-shadow:inset 0 0 0 2px var(--accent); }
+.ginhcard { transition:transform .1s ease, opacity .1s ease; cursor:grab; }
+.ginhcard.sel { transform:translateY(-12px); box-shadow:0 12px 22px rgba(0,0,0,.5); outline:3px solid var(--accent); outline-offset:1px; border-radius:9px; }
+.ginhcard.dragging { opacity:.32; }
+.dragghost { position:fixed; z-index:9800; pointer-events:none; transform:translate(-50%,-50%) rotate(3deg) scale(1.06);
+  filter:drop-shadow(0 12px 18px rgba(0,0,0,.55)); }
+.dragghost .gfcard { width:60px; height:84px; }
+.dragghost .face, .dragghost .back { width:100%; height:100%; }
   </style>
 </head>
 <body>
@@ -504,6 +526,8 @@ body::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:
   let multiSel = [];      // shared multi-card selection (Cheat / Hearts pass / Big Two)
   let c8Eight = null;     // Crazy Eights: an 8 awaiting a suit choice
   let ginSel = null;      // Gin: card selected to discard
+  let ginDrawSel = null;  // Gin: pile armed to draw from ("stock"|"discard")
+  let ginOrder = [];      // Gin: client-side custom hand order (cosmetic)
   let solSel = null;      // Solitaire: chosen source {zone,col,index,suit}
   let _lastMode = null;   // clear transient selections when the game changes
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -665,7 +689,7 @@ body::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:
     if (!me) return renderHome();
     if (!state) { app.innerHTML = '<div class="home"><div class="home-inner"><div class="suits">\u2660 \u2665 \u2666 \u2663</div><p class="sub">Connecting\u2026</p></div></div>'; return; }
     const mode = currentMode();
-    if (mode !== _lastMode) { multiSel = []; c8Eight = null; ginSel = null; solSel = null; askRank = null; _lastMode = mode; }
+    if (mode !== _lastMode) { multiSel = []; c8Eight = null; ginSel = null; ginDrawSel = null; ginOrder = []; solSel = null; askRank = null; _lastMode = mode; }
     if (mode === "poker") renderPoker();
     else if (mode === "gofish") renderGoFish();
     else if (mode === "blackjack") renderBlackjack();
@@ -1389,6 +1413,39 @@ body::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:
   }
 
   /* ---------------- Gin Rummy ---------------- */
+  /* pointer drag/tap helper: distinguishes a tap from a drag, shows a floating
+     ghost while dragging. Works with touch + mouse via Pointer Events. */
+  function pointerDraggable(el, o) {
+    el.style.touchAction = "none";
+    el.addEventListener("pointerdown", (e) => {
+      if (e.button != null && e.button !== 0) return;
+      const sx = e.clientX, sy = e.clientY; let dragging = false, ghost = null;
+      const begin = () => {
+        dragging = true; ghost = document.createElement("div"); ghost.className = "dragghost";
+        ghost.innerHTML = o.ghostHTML(); document.body.appendChild(ghost); el.classList.add("dragging");
+      };
+      const place = (x, y) => { if (ghost) { ghost.style.left = x + "px"; ghost.style.top = y + "px"; } if (dragging && o.onMove) o.onMove(x, y); };
+      const mv = (ev) => {
+        if (!dragging) { if ((o.canDrag ? o.canDrag() : true) && (Math.abs(ev.clientX - sx) > 6 || Math.abs(ev.clientY - sy) > 6)) begin(); else return; }
+        ev.preventDefault(); place(ev.clientX, ev.clientY);
+      };
+      const up = (ev) => {
+        window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up);
+        if (dragging) { if (ghost) ghost.remove(); el.classList.remove("dragging"); if (o.onDrop) o.onDrop(ev.clientX, ev.clientY); }
+        else if (o.onTap) o.onTap();
+      };
+      window.addEventListener("pointermove", mv); window.addEventListener("pointerup", up); window.addEventListener("pointercancel", up);
+    });
+  }
+  const overSel = (x, y, sel) => { const t = document.elementFromPoint(x, y); return t && t.closest(sel); };
+  // keep a stable, player-chosen hand order across draws/discards
+  function ginHandOrder(g) {
+    const have = g.myHand, set = new Set(have);
+    let ord = ginOrder.filter((c) => set.has(c));
+    for (const c of have) if (ord.indexOf(c) < 0) ord.push(c);
+    ginOrder = ord; return ord;
+  }
+
   function renderGin() {
     const g = state.gin;
     if (!g || !g.started) return startScreen("Gin Rummy", state.players.length === 2 ? "Two players ready." : "Gin Rummy needs exactly 2 players.", state.players.length === 2, "ginStart", "Deal &amp; start");
@@ -1407,23 +1464,92 @@ body::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:
       wireHead(); const n = document.getElementById("ginnext"); if (n) n.onclick = () => emit("ginNext"); return;
     }
     const meldSet = new Set(); (g.myMelds || []).forEach((m) => m.forEach((c) => meldSet.add(c)));
-    const selectable = g.canDiscard;
-    const myHand = g.myHand.map((code) => `<div class="gfcard${meldSet.has(code) ? " meld" : ""}${ginSel === code ? " sel" : ""}"${selectable ? ` data-gindisc="${code}"` : ""}>${cardInner(code, true)}</div>`).join("");
+    const order = ginHandOrder(g);
+
+    // ---- board: deck (stock) + discard, in the middle ----
+    const stockDraw = g.canDraw && g.stockCount > 0, discDraw = g.canDraw && !!g.discardTop;
+    const board = `<div class="ginboard">
+      <div class="ginpile ginstock${stockDraw ? " armable" : ""}${ginDrawSel === "stock" ? " armed" : ""}" data-ginpile="stock">
+        <div class="ginpilecard">${g.stockCount ? '<div class="back"></div>' : '<span class="solph">\u2014</span>'}${g.stockCount ? `<span class="solnum">${g.stockCount}</span>` : ""}</div>
+        <div class="pilelbl">Deck</div>
+      </div>
+      <div class="ginpile gindiscard${discDraw ? " armable" : ""}${ginDrawSel === "discard" ? " armed" : ""}${g.canDiscard ? " target" : ""}" data-ginpile="discard" id="gindiscardpile">
+        <div class="ginpilecard">${g.discardTop ? cardInner(g.discardTop, true) : '<span class="solph">\u2014</span>'}</div>
+        <div class="pilelbl">Discard</div>
+      </div>
+    </div>`;
+
+    // ---- hand (custom order, drag to rearrange) ----
+    const hand = order.map((code) => `<div class="gfcard ginhcard${meldSet.has(code) ? " meld" : ""}${ginSel === code ? " sel" : ""}" data-gincard="${code}">${cardInner(code, true)}</div>`).join("");
+
+    // ---- action / confirm bar ----
+    const confirmBar = (label, btns) => `<div class="gfaction"><div class="gflabel">${label}</div><div class="actrow">${btns.map(([t, id, cls]) => `<button class="pbtn ${cls}" id="${id}">${t}</button>`).join("")}</div></div>`;
     let action;
     if (g.canDraw) {
-      action = `<div class="gfaction"><div class="gflabel">Draw a card</div><div class="actrow"><button class="pbtn call" id="ginstock">Draw stock (${g.stockCount})</button>${g.discardTop ? `<button class="pbtn" id="gintake">Take ${g.discardTop}</button>` : ""}</div></div>`;
+      if (ginDrawSel === "stock") action = confirmBar("Draw the top of the deck?", [["Draw", "gincdraw", "call"], ["Cancel", "gincancel", "fold"]]);
+      else if (ginDrawSel === "discard") action = confirmBar(`Take ${g.discardTop} from the discard?`, [["Take it", "gincdraw", "call"], ["Cancel", "gincancel", "fold"]]);
+      else action = `<div class="gfaction"><div class="gflabel">Your turn \u2014 tap or drag the <b>deck</b> or <b>discard</b> into your hand</div></div>`;
     } else if (g.canDiscard) {
-      action = `<div class="gfaction"><div class="gflabel">Deadwood <b>${g.myDeadwood}</b> \u2014 tap a card to discard${ginSel ? ` (<b>${ginSel}</b>)` : ""}</div><div class="actrow"><button class="pbtn call${ginSel ? "" : " disabled"}" id="gindiscard">Discard</button>${g.knockable ? `<button class="pbtn allin${ginSel ? "" : " disabled"}" id="ginknock">Knock</button>` : ""}</div></div>`;
-    } else {
-      action = `<div class="gfaction idle"><span class="hint">${esc(opp.name || "Opponent")} is thinking\u2026</span></div>`;
-    }
-    app.innerHTML = `<div class="table">${gHead()}${head2}<div class="felt pokerfelt"><div class="pokerinfo">Discard ${g.discardTop || "\u2014"} \u00b7 Stock ${g.stockCount}</div>${logBox(g.log)}</div><div class="hand pokerhand"><div class="handlabel">YOUR HAND <span>deadwood ${g.myDeadwood} \u00b7 melds shaded</span></div><div class="gfhand">${myHand}</div>${action}</div></div>`;
+      if (ginSel) {
+        const btns = [["Discard " + ginSel, "gincdiscard", "call"]];
+        if (g.knockable) btns.push(["Knock", "gincknock", "allin"]);
+        btns.push(["Cancel", "gincancel", "fold"]);
+        action = confirmBar(`Deadwood <b>${g.myDeadwood}</b> \u2014 confirm`, btns);
+      } else action = `<div class="gfaction"><div class="gflabel">Deadwood <b>${g.myDeadwood}</b> \u2014 tap a card then Discard, or drag it onto the discard pile</div></div>`;
+    } else action = `<div class="gfaction idle"><span class="hint">${esc(opp.name || "Opponent")} is thinking\u2026</span></div>`;
+
+    app.innerHTML = `<div class="table">${gHead()}${head2}
+      <div class="felt pokerfelt ginfelt">${board}${logBox(g.log)}</div>
+      <div class="hand pokerhand">
+        <div class="handlabel">YOUR HAND <span>deadwood ${g.myDeadwood} \u00b7 drag to rearrange</span></div>
+        <div class="gfhand ginhand" id="ginhand">${hand}</div>
+        ${action}
+      </div></div>`;
     wireHead();
-    const st = document.getElementById("ginstock"); if (st) st.onclick = () => emit("ginDrawStock");
-    const tk = document.getElementById("gintake"); if (tk) tk.onclick = () => emit("ginDrawDiscard");
-    app.querySelectorAll("[data-gindisc]").forEach((el) => el.onclick = () => { const c = el.getAttribute("data-gindisc"); ginSel = (ginSel === c ? null : c); renderGin(); });
-    const dd = document.getElementById("gindiscard"); if (dd) dd.onclick = () => { if (!ginSel) { toast("Tap a card first"); return; } emit("ginDiscard", { card: ginSel, knock: false }); ginSel = null; };
-    const kk = document.getElementById("ginknock"); if (kk) kk.onclick = () => { if (!ginSel) { toast("Tap a card to discard"); return; } emit("ginDiscard", { card: ginSel, knock: true }); ginSel = null; };
+
+    // confirm buttons
+    const byId = (id) => document.getElementById(id);
+    const cd = byId("gincdraw"); if (cd) cd.onclick = () => { emit(ginDrawSel === "discard" ? "ginDrawDiscard" : "ginDrawStock"); ginDrawSel = null; };
+    const cc = byId("gincancel"); if (cc) cc.onclick = () => { ginDrawSel = null; ginSel = null; renderGin(); };
+    const cdi = byId("gincdiscard"); if (cdi) cdi.onclick = () => { if (ginSel) { emit("ginDiscard", { card: ginSel, knock: false }); ginSel = null; } };
+    const ck = byId("gincknock"); if (ck) ck.onclick = () => { if (ginSel) { emit("ginDiscard", { card: ginSel, knock: true }); ginSel = null; } };
+
+    const discPile = byId("gindiscardpile"), handEl = byId("ginhand");
+
+    // piles: tap to arm + confirm, or drag into hand to draw
+    app.querySelectorAll("[data-ginpile]").forEach((el) => {
+      const pile = el.getAttribute("data-ginpile");
+      const drawable = pile === "stock" ? stockDraw : discDraw;
+      pointerDraggable(el, {
+        canDrag: () => drawable,
+        ghostHTML: () => `<div class="gfcard">${pile === "discard" && g.discardTop ? cardInner(g.discardTop, true) : '<div class="back"></div>'}</div>`,
+        onMove: (x, y) => { if (handEl) handEl.classList.toggle("drophint", !!overSel(x, y, ".ginhand")); },
+        onDrop: (x, y) => { if (handEl) handEl.classList.remove("drophint"); if (drawable && overSel(x, y, ".ginhand")) { emit(pile === "discard" ? "ginDrawDiscard" : "ginDrawStock"); ginDrawSel = null; } else renderGin(); },
+        onTap: () => { if (!g.canDraw) return; if (ginDrawSel === pile) { emit(pile === "discard" ? "ginDrawDiscard" : "ginDrawStock"); ginDrawSel = null; } else { ginDrawSel = pile; renderGin(); } },
+      });
+    });
+
+    // hand cards: tap to select (discard), drag onto discard to discard, or drag sideways to reorder
+    app.querySelectorAll("[data-gincard]").forEach((el) => {
+      const code = el.getAttribute("data-gincard");
+      pointerDraggable(el, {
+        canDrag: () => true,
+        ghostHTML: () => `<div class="gfcard">${cardInner(code, true)}</div>`,
+        onMove: (x, y) => { if (discPile) discPile.classList.toggle("drophint", g.canDiscard && !!overSel(x, y, "#gindiscardpile")); },
+        onDrop: (x, y) => {
+          if (discPile) discPile.classList.remove("drophint");
+          if (g.canDiscard && overSel(x, y, "#gindiscardpile")) { emit("ginDiscard", { card: code, knock: false }); ginSel = null; return; }
+          // reorder within hand by pointer x
+          const cards = [...app.querySelectorAll("#ginhand [data-gincard]")];
+          let idx = cards.length;
+          for (let i = 0; i < cards.length; i++) { const r = cards[i].getBoundingClientRect(); if (x < r.left + r.width / 2) { idx = i; break; } }
+          const cur = ginOrder.slice(), from = cur.indexOf(code);
+          if (from >= 0) { cur.splice(from, 1); cur.splice(from < idx ? idx - 1 : idx, 0, code); ginOrder = cur; }
+          renderGin();
+        },
+        onTap: () => { if (g.canDiscard) { ginSel = (ginSel === code ? null : code); renderGin(); } },
+      });
+    });
   }
 
   /* ---------------- Big Two ---------------- */
