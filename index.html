@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0e3b2b" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -10,6 +10,7 @@
   <style>
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; }
 html, body, #app { height: 100%; }
+html { touch-action: pan-x pan-y; }
 body { font-family: 'Outfit', system-ui, sans-serif; color: #f3ead4;
   background: radial-gradient(120% 90% at 50% -10%, #16523c 0%, #0e3b2b 45%, #08291e 100%); }
 body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity:.35;
@@ -82,9 +83,15 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
 .back { background:var(--cd-back-bg,repeating-linear-gradient(45deg,#7a1f1f,#7a1f1f 5px,#8c2727 5px,#8c2727 10px)); border:2px solid var(--cd-back-border,#e6c068); box-shadow:var(--cd-shadow,0 3px 8px rgba(0,0,0,.4)); }
 .back::after { content:''; position:absolute; inset:5px; border:1px solid rgba(255,255,255,.28); border-radius:4px; }
 .corner { position:absolute; display:flex; flex-direction:column; align-items:center; line-height:.95; font-weight:700; font-family:var(--cd-font,'Fraunces',serif); }
-.corner .r { font-size:15px; } .corner .s { font-size:12px; }
+.corner .r { font-size:14px; } .corner .s { font-size:11px; }
 .corner.tl { top:5px; left:6px; } .corner.br { bottom:5px; right:6px; transform:rotate(180deg); }
-.pip { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; }
+.pip { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:20px; }
+@supports (container-type: inline-size) {
+  .face { container-type: inline-size; }
+  .corner .r { font-size:21cqw; } .corner .s { font-size:16cqw; }
+  .corner.tl { top:7cqw; left:8cqw; } .corner.br { bottom:7cqw; right:8cqw; }
+  .pip { font-size:38cqw; }
+}
 .eye { position:absolute; top:-9px; right:-7px; font-size:14px; background:#0e3b2b; border:1px solid #d9b35c; border-radius:50%; width:22px; height:22px; display:flex; align-items:center; justify-content:center; }
 
 /* hand */
@@ -222,15 +229,20 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
 .gftarget { background:rgba(217,179,92,.16); border-color:#d9b35c; }
 
 /* ---------- Blackjack ---------- */
-.bjdealer { display:flex; flex-direction:column; align-items:center; gap:6px; margin:4px 0 10px; }
-.bjwho { font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:#9fc0ad; display:flex; align-items:center; gap:8px; }
-.bjcards { display:flex; gap:6px; justify-content:center; }
-.bjcards.small { gap:4px; }
-.bjcard { width:46px; height:64px; }
-.bjcard.sm { width:38px; height:54px; }
+.bjfelt { justify-content:center; gap:22px; padding-bottom:18px; }
+.bjdealer { display:flex; flex-direction:column; align-items:center; gap:9px; }
+.bjwho { font-size:14px; letter-spacing:.1em; text-transform:uppercase; color:#9fc0ad; display:flex; align-items:center; gap:9px; }
+.bjcards { display:flex; gap:8px; justify-content:center; }
+.bjcards.small { gap:6px; }
+.bjcard { width:64px; height:90px; }
+.bjcard.sm { width:56px; height:80px; }
 .bjcard .face, .bjcard .back { width:100%; height:100%; }
-.bjt { font-family:'Fraunces',serif; font-weight:700; font-size:15px; color:#fff5dd; background:rgba(0,0,0,.3); padding:1px 9px; border-radius:11px; }
-.bjplayers { align-items:flex-start; }
+.bjt { font-family:'Fraunces',serif; font-weight:700; font-size:17px; color:#fff5dd; background:rgba(0,0,0,.3); padding:2px 11px; border-radius:12px; }
+.bjplayers { align-items:flex-start; gap:12px; }
+.bjplayers .pseat { padding:11px 15px; min-width:150px; }
+.bjplayers .pn { font-size:15px; }
+.bjplayers .pchips { font-size:13.5px; }
+.bjplayers .bjcards { margin:3px 0; }
 .pseat.me { border-color:rgba(230,192,104,.5); }
 .bjres { font-size:12px; font-weight:700; margin-top:4px; padding:3px 9px; border-radius:9px; display:inline-block; }
 .bjres.win, .bjres.blackjack { background:rgba(124,196,142,.18); color:#9be6a8; }
@@ -248,6 +260,14 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
 (function () {
   const socket = io();
   const app = document.getElementById("app");
+
+  // Keep the table fixed: block pinch and double-tap zoom (single-finger drag/scroll unaffected)
+  document.addEventListener("gesturestart", (e) => e.preventDefault());
+  document.addEventListener("gesturechange", (e) => e.preventDefault());
+  document.addEventListener("gestureend", (e) => e.preventDefault());
+  document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  let _lastTap = 0;
+  document.addEventListener("touchend", (e) => { const n = Date.now(); if (n - _lastTap < 320) e.preventDefault(); _lastTap = n; }, { passive: false });
 
   const SUIT = { S: ["\u2660", "#1a1a1a"], H: ["\u2665", "#b3261e"], D: ["\u2666", "#b3261e"], C: ["\u2663", "#1a1a1a"] };
   const RLAB = { T: "10" };
@@ -857,7 +877,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
       action = `<div class="actionbar idle"><span class="hint">${bj.phase === "dealer" ? "Dealer playing\u2026" : (t ? esc(t) + " deciding\u2026" : "")}</span></div>`;
     }
     app.innerHTML = `<div class="table">${head}
-      <div class="felt pokerfelt">
+      <div class="felt pokerfelt bjfelt">
         <div class="pokerinfo">Blackjack \u00b7 min bet ${bj.minBet}</div>
         ${dealerHtml}
         <div class="players pokerplayers bjplayers">${playersHtml}</div>
