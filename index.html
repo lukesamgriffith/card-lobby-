@@ -7,6 +7,13 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="icon" href="/favicon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Card Lobby" />
+  <title>Card Lobby</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; }
 html, body, #app { height: 100%; }
@@ -249,6 +256,110 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
 .bjres.lose { background:rgba(255,120,110,.14); color:#ffb4ab; }
 .bjres.push { background:rgba(255,255,255,.08); color:#cde0d4; }
 .bjbet { flex-direction:column; gap:9px; }
+
+/* ============ Shared additions for the 8 games ============ */
+.pseat.leader { border-color:rgba(230,192,104,.55); box-shadow:0 0 0 1px rgba(230,192,104,.4); }
+.gfcard.playable { cursor:pointer; }
+.gfcard.playable:active { transform:translateY(-6px); }
+.gfcard.dim { opacity:.42; }
+.gfcard.meld { box-shadow:inset 0 0 0 2px rgba(230,192,104,.7); border-radius:9px; }
+.emptyhand { color:#6f9381; font-size:13px; }
+.tn { font-size:11px; color:#9fc0ad; text-align:center; margin-bottom:3px; max-width:62px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ---- War ---- */
+.warfelt { gap:14px; }
+.warpiles { display:flex; align-items:center; justify-content:center; gap:14px; margin-top:4px; }
+.warpile { text-align:center; }
+.warpile .pn { display:block; margin-bottom:6px; }
+.warpile.me .pn { color:#fff5dd; }
+.warback { width:54px; height:76px; margin:0 auto; }
+.warcount { font-size:12px; color:#cde0d4; margin-top:6px; }
+.warvs { font-family:'Fraunces',serif; font-size:18px; color:#d9b35c; opacity:.8; }
+.warbattle { display:flex; align-items:flex-start; justify-content:center; gap:14px; min-height:96px; width:100%; }
+.warbattle.empty { align-items:center; color:#8fb6a1; font-size:13px; }
+.warside { text-align:center; }
+.warcards { display:flex; gap:4px; justify-content:center; }
+.warcard { width:52px; height:74px; }
+.warcard .face, .warcard .back { width:100%; height:100%; }
+.warcard.facedown { margin-left:-30px; }
+.warmid { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; align-self:center; }
+.wartag { font-family:'Fraunces',serif; font-size:16px; color:#ffd9a0; letter-spacing:.1em; }
+.warwon { font-size:12px; color:#cde0d4; }
+
+/* ---- Crazy Eights ---- */
+.c8center { display:flex; align-items:center; gap:16px; justify-content:center; margin-top:4px; }
+.c8top { width:62px; height:88px; }
+.c8top .face, .c8top .back { width:100%; height:100%; }
+.c8meta { display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
+.c8suit { font-size:30px; line-height:1; }
+.c8suit.red { color:#d4453a; } .c8suit.black { color:#1a1a1a; filter:drop-shadow(0 0 1px rgba(255,255,255,.4)); }
+.c8stock { font-size:12px; color:#9fc0ad; }
+.suitpick { display:flex; gap:8px; justify-content:center; }
+.suitbtn { width:52px; height:52px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.92); font-size:26px; cursor:pointer; }
+.suitbtn.red { color:#d4453a; } .suitbtn.black { color:#1a1a1a; }
+
+/* ---- Cheat ---- */
+.cheatinfo { font-size:13px; color:#cfe3d6; } .cheatinfo b { color:#fff5dd; }
+.cheatlast { font-size:13px; color:#cde0d4; background:rgba(0,0,0,.22); border-radius:10px; padding:6px 11px; }
+.revealbox { width:100%; max-width:380px; border-radius:13px; padding:11px 12px; text-align:center; animation:rise .25s ease; }
+.revealbox.truth { background:rgba(60,120,80,.28); border:1px solid rgba(120,200,140,.4); }
+.revealbox.lie { background:rgba(150,50,50,.28); border:1px solid rgba(220,120,120,.45); }
+.revealhdr { font-size:13px; color:#eadfc4; margin-bottom:7px; }
+.revealcards { display:flex; gap:4px; justify-content:center; flex-wrap:wrap; margin-bottom:7px; }
+.revealverdict { font-size:13px; font-weight:600; color:#fff5dd; }
+
+/* ---- Trick area (Hearts / Spades) ---- */
+.trickarea { display:flex; gap:10px; justify-content:center; align-items:flex-start; min-height:96px; flex-wrap:wrap; margin-top:4px; }
+.trickcard { display:flex; flex-direction:column; align-items:center; }
+.trickcard .face, .trickcard .back { width:52px; height:74px; }
+
+/* ---- Spades scoreboard ---- */
+.scoreboard { display:flex; gap:8px; padding:4px 12px 8px; }
+.teamcard { flex:1; background:rgba(0,0,0,.26); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:8px 11px; font-size:13px; color:#cde0d4; }
+.teamcard.mine { border-color:#e6c068; box-shadow:0 0 0 1px rgba(230,192,104,.4); }
+.teamcard b { color:#fff5dd; font-family:'Fraunces',serif; font-size:16px; }
+.bags { color:#9fc0ad; font-size:12px; }
+.tt { font-size:10px; color:#d9b35c; border:1px solid rgba(217,179,92,.4); border-radius:6px; padding:0 4px; }
+
+/* ---- Bidding ---- */
+.bidpicker { width:100%; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.bidgrid { display:grid; grid-template-columns:repeat(7,1fr); gap:7px; width:100%; max-width:360px; }
+.bidbtn { padding:11px 0; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); color:#f3ead4; font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; }
+.bidbtn:active { background:linear-gradient(180deg,#e6c068,#cf9f3f); color:#3a2a06; }
+
+/* ---- Big Two ---- */
+.b2current { display:flex; flex-direction:column; align-items:center; gap:6px; margin-top:4px; }
+.b2current.empty { color:#8fb6a1; font-size:13px; }
+.b2type { font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#d9b35c; }
+.b2cards { display:flex; gap:4px; justify-content:center; flex-wrap:wrap; }
+
+/* ---- Solitaire ---- */
+.solfelt { flex:1; display:flex; flex-direction:column; padding:8px 10px; gap:10px; }
+.soltop { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+.solfounds { display:flex; gap:5px; }
+.solfound { width:44px; height:62px; border-radius:7px; border:1px dashed rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center; }
+.solfound.sel { outline:3px solid #e6c068; outline-offset:1px; }
+.solfound .face, .solfound .back { width:100%; height:100%; }
+.solph { font-size:20px; color:rgba(255,255,255,.3); }
+.solfound.red .solph { color:rgba(212,69,58,.5); }
+.solstockwaste { display:flex; gap:5px; }
+.solpile { width:44px; height:62px; border-radius:7px; position:relative; cursor:pointer; }
+.solstock { border:1px dashed rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center; }
+.solstock .back { width:100%; height:100%; }
+.solwaste { border:1px dashed rgba(255,255,255,.12); }
+.solwaste.sel { outline:3px solid #e6c068; outline-offset:1px; }
+.solwaste .face { width:100%; height:100%; }
+.solnum { position:absolute; bottom:-2px; right:-2px; font-size:10px; background:rgba(0,0,0,.6); color:#cde0d4; border-radius:6px; padding:0 4px; }
+.soltableau { display:flex; gap:5px; justify-content:center; flex:1; overflow-x:auto; }
+.solcol { display:flex; flex-direction:column; min-width:44px; min-height:62px; }
+.solcol .solempty { width:44px; height:62px; border-radius:7px; border:1px dashed rgba(255,255,255,.18); display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,.3); font-size:20px; }
+.solcard { width:44px; height:62px; margin-bottom:-44px; }
+.solcard:last-child { margin-bottom:0; }
+.solcard .face, .solcard .back { width:100%; height:100%; box-shadow:0 1px 4px rgba(0,0,0,.4); }
+.solcard.up { cursor:pointer; }
+.solcard.sel .face { outline:3px solid #e6c068; outline-offset:-1px; border-radius:7px; }
+.solbanner { font-size:13px; color:#cde0d4; display:flex; align-items:center; gap:10px; justify-content:center; flex-wrap:wrap; }
+.solbar { display:flex; flex-direction:column; gap:9px; align-items:center; width:100%; }
   </style>
 </head>
 <body>
@@ -284,6 +395,11 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
   let chipAmt = 500;      // chosen amount for the add-chips chooser
   let askRank = null;     // Go Fish: the rank currently selected to ask for
   let betAmt = 0;         // Blackjack: chosen bet
+  let multiSel = [];      // shared multi-card selection (Cheat / Hearts pass / Big Two)
+  let c8Eight = null;     // Crazy Eights: an 8 awaiting a suit choice
+  let ginSel = null;      // Gin: card selected to discard
+  let solSel = null;      // Solitaire: chosen source {zone,col,index,suit}
+  let _lastMode = null;   // clear transient selections when the game changes
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   /* ---- card themes ----
@@ -322,23 +438,23 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
       rules: ["Everyone gets 2 private hole cards.", "Make your best 5-card hand from your 2 cards plus 5 shared community cards.", "Betting rounds: pre-flop, flop (3 cards), turn (1), river (1).", "On your turn: check, call, raise, or fold. Small and big blinds force the early action.", "Best hand at showdown wins the pot. Ranking: high card, pair, two pair, trips, straight, flush, full house, quads, straight flush."] },
     { id: "blackjack", name: "Blackjack", cat: "Casino", players: "1\u20136", status: "ready",
       rules: ["Beat the dealer by getting closer to 21 without going over.", "Number cards score their value, J/Q/K are 10, an Ace is 1 or 11.", "Hit to draw another card, stand to hold. Go over 21 and you bust.", "The dealer draws to 16 and stands on 17.", "A natural blackjack (Ace + ten-card) pays extra."] },
-    { id: "hearts", name: "Hearts", cat: "Trick-taking", players: "4", status: "soon",
+    { id: "hearts", name: "Hearts", cat: "Trick-taking", players: "4", status: "ready",
       rules: ["Avoid taking points: every heart is 1 point, the Queen of Spades is 13.", "Follow the suit that was led if you can; otherwise play anything.", "The highest card of the led suit wins the trick \u2014 and any points in it.", "Pass 3 cards to an opponent at the start of each hand.", "Lowest score wins. Take ALL the points ('shoot the moon') to hand 26 to everyone else."] },
-    { id: "spades", name: "Spades", cat: "Trick-taking", players: "4", status: "soon",
+    { id: "spades", name: "Spades", cat: "Trick-taking", players: "4", status: "ready",
       rules: ["Partnership trick-taking where spades are always trump.", "Each player bids how many tricks they expect to win.", "Make your team's combined bid to score; fall short and lose those points.", "Follow suit if you can. You can't lead spades until they've been 'broken'.", "First partnership to 500 points wins."] },
-    { id: "gin", name: "Gin Rummy", cat: "Rummy", players: "2", status: "soon",
+    { id: "gin", name: "Gin Rummy", cat: "Rummy", players: "2", status: "ready",
       rules: ["Draw and discard to form melds: runs (3+ in a suit) and sets (3\u20134 of a kind).", "Cards not in a meld are 'deadwood'.", "Knock when your deadwood totals 10 or less to score the difference.", "Gin (no deadwood at all) earns a bonus.", "First to 100 points wins the game."] },
-    { id: "bigtwo", name: "Big Two", cat: "Shedding", players: "4", status: "soon",
+    { id: "bigtwo", name: "Big Two", cat: "Shedding", players: "4", status: "ready",
       rules: ["Be the first to shed all your cards.", "Play singles, pairs, or 5-card poker hands that beat the previous play.", "2 is the highest rank; suits rank \u2666 < \u2663 < \u2665 < \u2660.", "Pass if you can't or won't beat the last play; the round resets once everyone passes.", "Whoever holds the 3\u2666 leads the very first round."] },
-    { id: "crazy8s", name: "Crazy Eights", cat: "Family", players: "2\u20136", status: "soon",
+    { id: "crazy8", name: "Crazy Eights", cat: "Family", players: "2\u20136", status: "ready",
       rules: ["Match the top discard by either rank or suit.", "Can't play? Draw cards until you can.", "Eights are wild \u2014 play one any time and name the next suit.", "First to empty their hand wins.", "It's the family ancestor of UNO."] },
     { id: "gofish", name: "Go Fish", cat: "Family", players: "2\u20136", status: "ready",
       rules: ["Collect sets of four of a kind.", "On your turn, ask another player for a rank you already hold.", "If they have it they hand it over, and you ask again.", "If they don't \u2014 'Go Fish' \u2014 draw from the pool and your turn ends.", "Most completed sets when the cards run out wins."] },
-    { id: "war", name: "War", cat: "Family", players: "2", status: "soon",
+    { id: "war", name: "War", cat: "Family", players: "2", status: "ready",
       rules: ["Split the deck evenly, kept face-down.", "Both players flip their top card; the higher card wins both.", "A tie means 'war': lay cards down and flip again to settle it.", "Win every card to win the game.", "Pure luck \u2014 a perfect quick filler."] },
-    { id: "cheat", name: "Cheat (Bluff)", cat: "Social", players: "3\u20136", status: "soon",
+    { id: "cheat", name: "Cheat (Bluff)", cat: "Social", players: "3\u20136", status: "ready",
       rules: ["Goal: be the first to empty your hand.", "Play cards face-down while claiming a rank in sequence (e.g. 'two 7s').", "You're allowed to lie about what you put down.", "Anyone can call 'Cheat!' \u2014 flip the cards. A caught liar takes the pile; a wrong accuser takes it instead.", "Also known as Bluff or I Doubt It."] },
-    { id: "solitaire", name: "Solitaire (Klondike)", cat: "Solo", players: "1", status: "soon",
+    { id: "solitaire", name: "Solitaire (Klondike)", cat: "Solo", players: "1", status: "ready",
       rules: ["A solo game you play at your own table.", "Build the four foundations up by suit, from Ace to King.", "On the tableau, stack cards down in alternating colours.", "Turn cards from the stock when you're stuck.", "Move every card to the foundations to win."] },
   ];
   const gameById = (id) => GAMES.find((g) => g.id === id) || GAMES[0];
@@ -404,9 +520,18 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
     if (!me) return renderHome();
     if (!state) { app.innerHTML = '<div class="home"><div class="home-inner"><div class="suits">\u2660 \u2665 \u2666 \u2663</div><p class="sub">Connecting\u2026</p></div></div>'; return; }
     const mode = currentMode();
+    if (mode !== _lastMode) { multiSel = []; c8Eight = null; ginSel = null; solSel = null; askRank = null; _lastMode = mode; }
     if (mode === "poker") renderPoker();
     else if (mode === "gofish") renderGoFish();
     else if (mode === "blackjack") renderBlackjack();
+    else if (mode === "war") renderWar();
+    else if (mode === "crazy8") renderCrazy8();
+    else if (mode === "cheat") renderCheat();
+    else if (mode === "hearts") renderHearts();
+    else if (mode === "spades") renderSpades();
+    else if (mode === "gin") renderGin();
+    else if (mode === "bigtwo") renderBigTwo();
+    else if (mode === "solitaire") renderSolitaire();
     else if (mode === "freeform") renderTable();
     else renderComingSoon(mode);
     if (sheet) renderSheet();
@@ -901,6 +1026,325 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; opacity
       sl.oninput = () => setVal(parseInt(sl.value, 10) || min);
       document.querySelectorAll("[data-bp]").forEach((b) => b.onclick = () => { const k = b.getAttribute("data-bp"); setVal(k === "min" ? min : k === "max" ? max : Math.round(max / 2)); });
     }
+  }
+
+  /* ---------------- shared helpers for the extra games ---------------- */
+  function gHead() { return `<header class="top"><div class="codebox" id="codebox"><span class="codelabel">TABLE CODE</span><span class="codeval">${esc(state.code)}</span><span class="copy">tap to copy</span></div><button class="iconbtn" id="menu">\u22EF</button></header>`; }
+  function wireHead() {
+    const c = document.getElementById("codebox"); if (c) c.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(state.code); toast("Code copied"); };
+    const m = document.getElementById("menu"); if (m) m.onclick = () => { sheet = { kind: "menu" }; renderSheet(); };
+    const a = document.getElementById("addchips"); if (a) a.onclick = () => { sheet = { kind: "addchips" }; renderSheet(); };
+  }
+  function startScreen(title, msg, canStart, startEv, btnLabel) {
+    const inner = `<div class="sooncard"><div class="suits small">\u2660 \u2665 \u2666 \u2663</div><h2 class="soontitle">${title}</h2><p class="soonmsg">${msg}</p>${canStart ? `<button class="btn primary" id="gstart">${btnLabel}</button>` : ""}</div>`;
+    app.innerHTML = `<div class="table">${gHead()}<div class="felt soonfelt">${inner}</div></div>`;
+    wireHead(); const b = document.getElementById("gstart"); if (b) b.onclick = () => emit(startEv);
+  }
+  function overScreen(title, rows, canStart, startEv, btnLabel) {
+    const inner = `<div class="sooncard"><h2 class="soontitle">\uD83C\uDFC6 ${title}</h2>${rows ? `<div class="showlist">${rows}</div>` : ""}${canStart ? `<button class="btn primary" id="gstart">${btnLabel}</button>` : '<div class="hint">Not enough players to restart</div>'}</div>`;
+    app.innerHTML = `<div class="table">${gHead()}<div class="felt soonfelt">${inner}</div></div>`;
+    wireHead(); const b = document.getElementById("gstart"); if (b) b.onclick = () => emit(startEv);
+  }
+  const seatRow = (players, extra) => `<div class="players pokerplayers">` + players.map(extra).join("") + `</div>`;
+  const logBox = (log) => `<div class="gflog">${(log || []).map((l) => `<div class="logline">${esc(l)}</div>`).join("")}</div>`;
+
+  /* ---------------- War ---------------- */
+  function renderWar() {
+    const w = state.war;
+    if (!w || !w.started) return startScreen("War", state.players.length === 2 ? "Two players ready \u2014 deal to begin." : "War is for exactly 2 players.", state.players.length === 2, "warStart", "Deal &amp; start");
+    if (w.phase === "over" || w.winner) {
+      const wn = (w.players.find((p) => p.id === w.winner) || {}).name || "";
+      const rows = w.players.map((p) => `<div class="showrow"><span class="sn">${esc(p.name)}</span><span class="shand">${p.count} cards</span></div>`).join("");
+      return overScreen(esc(wn) + " takes the lot!", rows, state.players.length === 2, "warStart", "Play again");
+    }
+    const lb = w.lastBattle;
+    const piles = w.players.map((p) => `<div class="warpile${p.me ? " me" : ""}"><div class="pn">${esc(p.name)}${p.me ? " (you)" : ""}</div><div class="warback"><div class="back"></div></div><div class="warcount">${p.count} cards</div></div>`).join('<div class="warvs">VS</div>');
+    let battle = '<div class="warbattle empty">Tap Flip to do battle</div>';
+    if (lb) {
+      const side = (s) => `<div class="warside"><div class="tn">${esc(s.name)}</div><div class="warcards">${s.cards.map((c, i) => `<div class="warcard${i === s.cards.length - 1 ? "" : " facedown"}">${cardInner(c, i === s.cards.length - 1)}</div>`).join("")}</div></div>`;
+      const winName = (w.players.find((p) => p.id === lb.winner) || {}).name || "";
+      battle = `<div class="warbattle">${side(lb.a)}<div class="warmid">${lb.war ? '<div class="wartag">WAR!</div>' : ""}<div class="warwon">${esc(winName)} wins</div></div>${side(lb.b)}</div>`;
+    }
+    app.innerHTML = `<div class="table">${gHead()}
+      <div class="felt pokerfelt warfelt">
+        <div class="warpiles">${piles}</div>
+        ${battle}
+        ${logBox(w.log)}
+      </div>
+      <div class="hand pokerhand"><div class="actionbar"><div class="actrow"><button class="pbtn call" id="warflip">\u2694\uFE0F Flip</button></div></div></div></div>`;
+    wireHead();
+    const fb = document.getElementById("warflip"); if (fb) fb.onclick = () => emit("warFlip");
+  }
+
+  /* ---------------- Crazy Eights ---------------- */
+  function renderCrazy8() {
+    const g = state.c8;
+    if (!g || !g.started) return startScreen("Crazy Eights", state.players.length >= 2 ? "Match the rank or suit \u2014 eights are wild." : "Need at least 2 players.", state.players.length >= 2, "c8Start", "Deal &amp; start");
+    if (g.winner) {
+      const wn = (g.players.find((p) => p.id === g.winner) || {}).name || "";
+      const rows = g.players.map((p) => `<div class="showrow"><span class="sn">${esc(p.name)}</span><span class="shand">${p.count} card${p.count === 1 ? "" : "s"}</span></div>`).join("");
+      return overScreen(esc(wn) + " goes out \u2014 wins!", rows, state.players.length >= 2, "c8Start", "Play again");
+    }
+    const players = seatRow(g.players, (p) => `<div class="pseat${p.isTurn ? " turn" : ""}${p.away ? " folded" : ""}"><div class="pseat-top"><span class="pn">${esc(p.name)}${p.me ? " (you)" : ""}</span></div><div class="gfstats">\uD83C\uDCA0 ${p.count}</div></div>`);
+    const suitSym = SUIT[g.suit] ? SUIT[g.suit][0] : g.suit;
+    const playable = new Set(g.playable || []);
+    const myHand = g.myHand.map((code) => {
+      const ok = g.myTurn && playable.has(code) && !c8Eight;
+      return `<div class="gfcard${ok ? " playable" : (g.myTurn ? " dim" : "")}"${ok ? ` data-c8play="${code}"` : ""}>${cardInner(code, true)}</div>`;
+    }).join("");
+    let action;
+    if (c8Eight) {
+      action = `<div class="gfaction"><div class="gflabel">Choose a suit for your 8</div><div class="suitpick">` + ["S", "H", "D", "C"].map((s) => `<button class="suitbtn ${isRed(s) ? "red" : "black"}" data-c8suit="${s}">${SUIT[s][0]}</button>`).join("") + `</div><button class="pbtn fold" id="c8cancel">Cancel</button></div>`;
+    } else if (g.myTurn) {
+      action = `<div class="gfaction"><div class="gflabel">Your turn \u2014 play a card${(g.playable && g.playable.length) ? "" : ", or draw"}</div><div class="actrow"><button class="pbtn call" id="c8draw">Draw</button>${g.drew ? '<button class="pbtn" id="c8pass">Pass</button>' : ""}</div></div>`;
+    } else {
+      const t = (g.players.find((p) => p.isTurn) || {}).name;
+      action = `<div class="gfaction idle"><span class="hint">${t ? esc(t) + " is playing\u2026" : ""}</span></div>`;
+    }
+    app.innerHTML = `<div class="table">${gHead()}${players}
+      <div class="felt pokerfelt">
+        <div class="c8center"><div class="c8top">${cardInner(g.top, true)}</div><div class="c8meta"><div class="c8suit ${isRed(g.suit) ? "red" : "black"}">${suitSym}</div><div class="c8stock">Stock ${g.stockCount}</div></div></div>
+        ${logBox(g.log)}
+      </div>
+      <div class="hand pokerhand">
+        <div class="handlabel">YOUR HAND <span>${g.myHand.length} cards</span></div>
+        <div class="gfhand">${myHand || '<span class="emptyhand">No cards</span>'}</div>
+        ${action}
+      </div></div>`;
+    wireHead();
+    app.querySelectorAll("[data-c8play]").forEach((el) => el.onclick = () => { const code = el.getAttribute("data-c8play"); if (code.slice(0, -1) === "8") { c8Eight = code; renderCrazy8(); } else emit("c8Play", { card: code }); });
+    app.querySelectorAll("[data-c8suit]").forEach((b) => b.onclick = () => { emit("c8Play", { card: c8Eight, suit: b.getAttribute("data-c8suit") }); c8Eight = null; });
+    const cc = document.getElementById("c8cancel"); if (cc) cc.onclick = () => { c8Eight = null; renderCrazy8(); };
+    const dr = document.getElementById("c8draw"); if (dr) dr.onclick = () => emit("c8Draw");
+    const ps = document.getElementById("c8pass"); if (ps) ps.onclick = () => emit("c8Pass");
+  }
+
+  /* ---------------- Cheat (Bluff) ---------------- */
+  function renderCheat() {
+    const g = state.cheat;
+    if (!g || !g.started) return startScreen("Cheat (Bluff)", state.players.length >= 3 ? "Claim the next rank up \u2014 lie if you must." : "Cheat needs 3\u20136 players.", state.players.length >= 3, "cheatStart", "Deal &amp; start");
+    if (g.winner) {
+      const wn = (g.players.find((p) => p.id === g.winner) || {}).name || "";
+      return overScreen(esc(wn) + " empties their hand \u2014 wins!", "", state.players.length >= 3, "cheatStart", "Play again");
+    }
+    const players = seatRow(g.players, (p) => `<div class="pseat${p.isTurn ? " turn" : ""}${p.away ? " folded" : ""}"><div class="pseat-top"><span class="pn">${esc(p.name)}${p.me ? " (you)" : ""}</span></div><div class="gfstats">\uD83C\uDCA0 ${p.count}</div></div>`);
+    let reveal = "";
+    if (g.reveal) {
+      const r = g.reveal;
+      const cardsHtml = r.cards.map((c) => `<div class="warcard">${cardInner(c, true)}</div>`).join("");
+      reveal = `<div class="revealbox ${r.truthful ? "truth" : "lie"}"><div class="revealhdr">${esc(r.by)} called Cheat on ${esc(r.player)}</div><div class="revealcards">${cardsHtml}</div><div class="revealverdict">${r.truthful ? "Honest \u2014 " : "Bluff \u2014 "}${esc(r.loser)} takes ${r.taken} card${r.taken === 1 ? "" : "s"}</div></div>`;
+    }
+    const lp = g.lastPlay ? `<div class="cheatlast">${esc(g.lastPlay.name)} claimed ${g.lastPlay.count} \u00d7 ${esc(g.lastPlay.claimLabel)}</div>` : '<div class="cheatlast">Pile is empty \u2014 start the round</div>';
+    const selectable = g.myTurn;
+    const myHand = g.myHand.map((code) => `<div class="gfcard${multiSel.includes(code) ? " sel" : ""}"${selectable ? ` data-cheatpick="${code}"` : ""}>${cardInner(code, true)}</div>`).join("");
+    let action;
+    if (g.myTurn) {
+      const n = multiSel.length, canPlay = n >= 1 && n <= 4;
+      action = `<div class="gfaction"><div class="gflabel">Your turn \u2014 claim <b>${esc(g.reqLabel)}</b>. Pick 1\u20134 cards.</div><div class="actrow"><button class="pbtn call${canPlay ? "" : " disabled"}" id="cheatplay">Play ${n || ""} as ${esc(g.reqLabel)}</button>${g.canChallenge ? '<button class="pbtn fold" id="cheatcall">Cheat!</button>' : ""}</div></div>`;
+    } else {
+      const t = (g.players.find((p) => p.isTurn) || {}).name;
+      action = `<div class="gfaction idle"><span class="hint">${t ? esc(t) + " is playing\u2026" : ""}</span>${g.canChallenge ? '<button class="pbtn fold" id="cheatcall">Cheat!</button>' : ""}</div>`;
+    }
+    app.innerHTML = `<div class="table">${gHead()}${players}
+      <div class="felt pokerfelt">
+        <div class="cheatinfo">Pile ${g.pileCount} \u00b7 Claim <b>${esc(g.reqLabel)}</b></div>
+        ${lp}${reveal}
+        ${logBox(g.log)}
+      </div>
+      <div class="hand pokerhand">
+        <div class="handlabel">YOUR HAND <span>${g.myHand.length} cards</span></div>
+        <div class="gfhand">${myHand || '<span class="emptyhand">No cards</span>'}</div>
+        ${action}
+      </div></div>`;
+    wireHead();
+    app.querySelectorAll("[data-cheatpick]").forEach((el) => el.onclick = () => { const c = el.getAttribute("data-cheatpick"); const i = multiSel.indexOf(c); if (i >= 0) multiSel.splice(i, 1); else if (multiSel.length < 4) multiSel.push(c); renderCheat(); });
+    const pl = document.getElementById("cheatplay"); if (pl) pl.onclick = () => { if (multiSel.length < 1 || multiSel.length > 4) { toast("Pick 1\u20134 cards"); return; } emit("cheatPlay", { cards: multiSel.slice() }); multiSel = []; };
+    const ca = document.getElementById("cheatcall"); if (ca) ca.onclick = () => emit("cheatChallenge");
+  }
+
+  /* ---------------- Hearts ---------------- */
+  function renderHearts() {
+    const h = state.hearts;
+    if (!h || !h.started) return startScreen("Hearts", state.players.length === 4 ? "Four players ready." : "Hearts needs exactly 4 players.", state.players.length === 4, "heartsStart", "Deal &amp; start");
+    if (h.phase === "over") {
+      const rows = h.results.standings.map((s) => `<div class="showrow"><span class="sn">${esc(s.name)}</span><span class="shand">${s.score}</span></div>`).join("");
+      const win = h.results.winners.map((c) => { const p = h.players.find((x) => x.id === c); return esc(p ? p.name : ""); }).join(" &amp; ");
+      return overScreen(win + " wins (lowest)!", rows, state.players.length === 4, "heartsStart", "New game");
+    }
+    const scoreboard = seatRow(h.players, (p) => `<div class="pseat${p.isTurn ? " turn" : ""}${p.isLeader ? " leader" : ""}${p.away ? " folded" : ""}"><div class="pseat-top"><span class="pn">${esc(p.name)}${p.me ? " (you)" : ""}</span><span class="bjt">${p.score}</span></div><div class="gfstats">\uD83C\uDCA0 ${p.count}</div></div>`);
+    if (h.phase === "handover") {
+      const rows = h.lastHand.map((r) => `<div class="showrow"><span class="sn">${esc(r.name)}</span><span class="shand">+${r.hand} \u00b7 ${r.total} total</span></div>`).join("");
+      app.innerHTML = `<div class="table">${gHead()}${scoreboard}<div class="felt pokerfelt"><div class="pokerinfo">Hand over</div><div class="showlist">${rows}</div><div class="actrow"><button class="pbtn call" id="heartsnext">Next hand</button></div></div></div>`;
+      wireHead(); const n = document.getElementById("heartsnext"); if (n) n.onclick = () => emit("heartsNext"); return;
+    }
+    const trick = `<div class="trickarea">` + (h.trick.length ? h.trick.map((t) => `<div class="trickcard"><div class="tn">${esc(t.name)}</div>${cardInner(t.card, true)}</div>`).join("") : '<div class="hint">\u2014 trick \u2014</div>') + `</div>`;
+    let handArea;
+    if (h.phase === "pass") {
+      const dir = { left: "left \u2192", right: "\u2190 right", across: "across", hold: "hold" }[h.passDir] || h.passDir;
+      const sel = new Set(multiSel);
+      const myHand = h.myHand.map((code) => `<div class="gfcard${sel.has(code) ? " sel" : ""}" data-hpass="${code}">${cardInner(code, true)}</div>`).join("");
+      const act = h.iPassed
+        ? `<div class="gfaction idle"><span class="hint">Cards passed \u2014 waiting for the table\u2026</span></div>`
+        : `<div class="gfaction"><div class="gflabel">Pass 3 cards <b>${dir}</b></div><div class="actrow"><button class="pbtn call${multiSel.length === 3 ? "" : " disabled"}" id="heartspass">Pass ${multiSel.length}/3</button></div></div>`;
+      handArea = `<div class="handlabel">YOUR HAND</div><div class="gfhand">${myHand}</div>${act}`;
+    } else {
+      const legal = new Set(h.legal || []);
+      const myHand = h.myHand.map((code) => { const ok = h.myTurn && !h.locked && legal.has(code); return `<div class="gfcard${ok ? " playable" : (h.myTurn ? " dim" : "")}"${ok ? ` data-hplay="${code}"` : ""}>${cardInner(code, true)}</div>`; }).join("");
+      let act;
+      if (h.locked) act = `<div class="gfaction idle"><span class="hint">resolving\u2026</span></div>`;
+      else if (h.myTurn) act = `<div class="gfaction"><div class="gflabel">Your turn \u2014 tap a card to play</div></div>`;
+      else { const t = (h.players.find((p) => p.isTurn) || {}).name; act = `<div class="gfaction idle"><span class="hint">${t ? esc(t) + "\u2026" : ""}</span></div>`; }
+      handArea = `<div class="handlabel">YOUR HAND <span>${h.heartsBroken ? "hearts broken" : "hearts not broken"}</span></div><div class="gfhand">${myHand}</div>${act}`;
+    }
+    app.innerHTML = `<div class="table">${gHead()}${scoreboard}<div class="felt pokerfelt">${trick}${logBox(h.log)}</div><div class="hand pokerhand">${handArea}</div></div>`;
+    wireHead();
+    app.querySelectorAll("[data-hpass]").forEach((el) => el.onclick = () => { const c = el.getAttribute("data-hpass"); const i = multiSel.indexOf(c); if (i >= 0) multiSel.splice(i, 1); else if (multiSel.length < 3) multiSel.push(c); renderHearts(); });
+    const pb = document.getElementById("heartspass"); if (pb) pb.onclick = () => { if (multiSel.length !== 3) { toast("Pick 3 cards"); return; } emit("heartsPass", { cards: multiSel.slice() }); multiSel = []; };
+    app.querySelectorAll("[data-hplay]").forEach((el) => el.onclick = () => emit("heartsPlay", { card: el.getAttribute("data-hplay") }));
+  }
+
+  /* ---------------- Spades ---------------- */
+  function renderSpades() {
+    const s = state.spades;
+    if (!s || !s.started) return startScreen("Spades", state.players.length === 4 ? "Four players \u2014 partners sit across." : "Spades needs exactly 4 players.", state.players.length === 4, "spadesStart", "Deal &amp; start");
+    if (s.phase === "over") {
+      const rows = `<div class="showrow"><span class="sn">Team A</span><span class="shand">${s.results.scores.A}</span></div><div class="showrow"><span class="sn">Team B</span><span class="shand">${s.results.scores.B}</span></div>`;
+      return overScreen(esc(s.results.winTeam) + " win!", rows, state.players.length === 4, "spadesStart", "New game");
+    }
+    const teamLine = `<div class="scoreboard"><div class="teamcard ${s.myTeam === "A" ? "mine" : ""}">Team A \u00b7 <b>${s.teams.A.score}</b> <span class="bags">\uD83D\uDCB0${s.teams.A.bags}</span></div><div class="teamcard ${s.myTeam === "B" ? "mine" : ""}">Team B \u00b7 <b>${s.teams.B.score}</b> <span class="bags">\uD83D\uDCB0${s.teams.B.bags}</span></div></div>`;
+    const players = seatRow(s.players, (p) => `<div class="pseat${p.isTurn ? " turn" : ""}${p.away ? " folded" : ""}"><div class="pseat-top"><span class="pn">${esc(p.name)}${p.me ? " (you)" : ""} <small class="tt">${p.team}</small></span></div><div class="gfstats">${p.bid == null ? "\u2014" : (p.bid === 0 ? "Nil" : p.bid)} bid \u00b7 ${p.tricks} won \u00b7 \uD83C\uDCA0${p.count}</div></div>`);
+    if (s.phase === "handover") {
+      const rows = s.lastHand.map((t) => `<div class="showrow"><span class="sn">Team ${t.key}</span><span class="shand">bid ${t.bid}, won ${t.tricks} \u2014 ${t.delta >= 0 ? "+" : ""}${t.delta} \u00b7 ${t.total}</span></div>`).join("");
+      app.innerHTML = `<div class="table">${gHead()}${teamLine}<div class="felt pokerfelt"><div class="pokerinfo">Hand scored</div><div class="showlist">${rows}</div><div class="actrow"><button class="pbtn call" id="spadesnext">Next hand</button></div></div></div>`;
+      wireHead(); const n = document.getElementById("spadesnext"); if (n) n.onclick = () => emit("spadesNext"); return;
+    }
+    const trick = `<div class="trickarea">` + (s.trick.length ? s.trick.map((t) => `<div class="trickcard"><div class="tn">${esc(t.name)}</div>${cardInner(t.card, true)}</div>`).join("") : '<div class="hint">\u2014 trick \u2014</div>') + `</div>`;
+    let handArea;
+    if (s.phase === "bid") {
+      if (s.myBidTurn) {
+        const btns = []; for (let i = 0; i <= 13; i++) btns.push(`<button class="bidbtn" data-bid="${i}">${i === 0 ? "Nil" : i}</button>`);
+        handArea = `<div class="bidpicker"><div class="gflabel">Your bid \u2014 how many tricks?</div><div class="bidgrid">${btns.join("")}</div></div>`;
+      } else {
+        const t = (s.players.find((p) => p.isTurn) || {}).name;
+        handArea = `<div class="gfaction idle"><span class="hint">${t ? esc(t) + " is bidding\u2026" : "Bidding\u2026"}</span></div>`;
+      }
+    } else {
+      const legal = new Set(s.legal || []);
+      const myHand = s.myHand.map((code) => { const ok = s.myTurn && !s.locked && legal.has(code); return `<div class="gfcard${ok ? " playable" : (s.myTurn ? " dim" : "")}"${ok ? ` data-splay="${code}"` : ""}>${cardInner(code, true)}</div>`; }).join("");
+      let act;
+      if (s.locked) act = `<div class="gfaction idle"><span class="hint">resolving\u2026</span></div>`;
+      else if (s.myTurn) act = `<div class="gfaction"><div class="gflabel">Your turn \u2014 tap a card</div></div>`;
+      else { const t = (s.players.find((p) => p.isTurn) || {}).name; act = `<div class="gfaction idle"><span class="hint">${t ? esc(t) + "\u2026" : ""}</span></div>`; }
+      handArea = `<div class="handlabel">YOUR HAND <span>${s.spadesBroken ? "spades broken" : "spades not broken"}</span></div><div class="gfhand">${myHand}</div>${act}`;
+    }
+    app.innerHTML = `<div class="table">${gHead()}${teamLine}${players}<div class="felt pokerfelt">${trick}${logBox(s.log)}</div><div class="hand pokerhand">${handArea}</div></div>`;
+    wireHead();
+    app.querySelectorAll("[data-bid]").forEach((b) => b.onclick = () => emit("spadesBid", { n: parseInt(b.getAttribute("data-bid"), 10) }));
+    app.querySelectorAll("[data-splay]").forEach((el) => el.onclick = () => emit("spadesPlay", { card: el.getAttribute("data-splay") }));
+  }
+
+  /* ---------------- Gin Rummy ---------------- */
+  function renderGin() {
+    const g = state.gin;
+    if (!g || !g.started) return startScreen("Gin Rummy", state.players.length === 2 ? "Two players ready." : "Gin Rummy needs exactly 2 players.", state.players.length === 2, "ginStart", "Deal &amp; start");
+    if (g.phase === "over") {
+      const rows = g.results.standings.map((s) => `<div class="showrow"><span class="sn">${esc(s.name)}</span><span class="shand">${s.score}</span></div>`).join("");
+      const win = g.results.winners.map((c) => { const p = g.players.find((x) => x.id === c); return esc(p ? p.name : ""); }).join(" &amp; ");
+      return overScreen(win + " wins!", rows, state.players.length === 2, "ginStart", "New game");
+    }
+    const opp = g.players.find((p) => !p.me) || {}, me = g.players.find((p) => p.me) || {};
+    const head2 = `<div class="players pokerplayers"><div class="pseat${opp.isTurn ? " turn" : ""}"><div class="pseat-top"><span class="pn">${esc(opp.name || "Opponent")}</span><span class="bjt">${opp.score || 0}</span></div><div class="gfstats">\uD83C\uDCA0 ${opp.count || 0}</div></div><div class="pseat${me.isTurn ? " turn" : ""} me"><div class="pseat-top"><span class="pn">${esc(me.name || "You")} (you)</span><span class="bjt">${me.score || 0}</span></div></div></div>`;
+    if (g.phase === "handover") {
+      let rows;
+      if (g.lastRound.wash) rows = '<div class="showrow"><span class="sn">Wash \u2014 stock ran out</span><span class="shand">no score</span></div>';
+      else rows = `<div class="showrow"><span class="sn">${esc(g.lastRound.kind)} \u2014 ${esc(g.lastRound.scorer)}</span><span class="shand">+${g.lastRound.pts}</span></div>` + g.lastRound.totals.map((t) => `<div class="showrow"><span class="sn">${esc(t.name)}</span><span class="shand">${t.score}</span></div>`).join("");
+      app.innerHTML = `<div class="table">${gHead()}${head2}<div class="felt pokerfelt"><div class="pokerinfo">Round over</div><div class="showlist">${rows}</div><div class="actrow"><button class="pbtn call" id="ginnext">Next hand</button></div></div></div>`;
+      wireHead(); const n = document.getElementById("ginnext"); if (n) n.onclick = () => emit("ginNext"); return;
+    }
+    const meldSet = new Set(); (g.myMelds || []).forEach((m) => m.forEach((c) => meldSet.add(c)));
+    const selectable = g.canDiscard;
+    const myHand = g.myHand.map((code) => `<div class="gfcard${meldSet.has(code) ? " meld" : ""}${ginSel === code ? " sel" : ""}"${selectable ? ` data-gindisc="${code}"` : ""}>${cardInner(code, true)}</div>`).join("");
+    let action;
+    if (g.canDraw) {
+      action = `<div class="gfaction"><div class="gflabel">Draw a card</div><div class="actrow"><button class="pbtn call" id="ginstock">Draw stock (${g.stockCount})</button>${g.discardTop ? `<button class="pbtn" id="gintake">Take ${g.discardTop}</button>` : ""}</div></div>`;
+    } else if (g.canDiscard) {
+      action = `<div class="gfaction"><div class="gflabel">Deadwood <b>${g.myDeadwood}</b> \u2014 tap a card to discard${ginSel ? ` (<b>${ginSel}</b>)` : ""}</div><div class="actrow"><button class="pbtn call${ginSel ? "" : " disabled"}" id="gindiscard">Discard</button>${g.knockable ? `<button class="pbtn allin${ginSel ? "" : " disabled"}" id="ginknock">Knock</button>` : ""}</div></div>`;
+    } else {
+      action = `<div class="gfaction idle"><span class="hint">${esc(opp.name || "Opponent")} is thinking\u2026</span></div>`;
+    }
+    app.innerHTML = `<div class="table">${gHead()}${head2}<div class="felt pokerfelt"><div class="pokerinfo">Discard ${g.discardTop || "\u2014"} \u00b7 Stock ${g.stockCount}</div>${logBox(g.log)}</div><div class="hand pokerhand"><div class="handlabel">YOUR HAND <span>deadwood ${g.myDeadwood} \u00b7 melds shaded</span></div><div class="gfhand">${myHand}</div>${action}</div></div>`;
+    wireHead();
+    const st = document.getElementById("ginstock"); if (st) st.onclick = () => emit("ginDrawStock");
+    const tk = document.getElementById("gintake"); if (tk) tk.onclick = () => emit("ginDrawDiscard");
+    app.querySelectorAll("[data-gindisc]").forEach((el) => el.onclick = () => { const c = el.getAttribute("data-gindisc"); ginSel = (ginSel === c ? null : c); renderGin(); });
+    const dd = document.getElementById("gindiscard"); if (dd) dd.onclick = () => { if (!ginSel) { toast("Tap a card first"); return; } emit("ginDiscard", { card: ginSel, knock: false }); ginSel = null; };
+    const kk = document.getElementById("ginknock"); if (kk) kk.onclick = () => { if (!ginSel) { toast("Tap a card to discard"); return; } emit("ginDiscard", { card: ginSel, knock: true }); ginSel = null; };
+  }
+
+  /* ---------------- Big Two ---------------- */
+  function renderBigTwo() {
+    const g = state.bigtwo;
+    if (!g || !g.started) return startScreen("Big Two", state.players.length === 4 ? "Four players \u2014 holder of 3\u2663 leads." : "Big Two needs exactly 4 players.", state.players.length === 4, "bigtwoStart", "Deal &amp; start");
+    if (g.phase === "over") {
+      const wn = (g.players.find((p) => p.id === g.winner) || {}).name || "";
+      const rows = g.players.map((p) => `<div class="showrow"><span class="sn">${esc(p.name)}</span><span class="shand">${p.count} left</span></div>`).join("");
+      return overScreen(esc(wn) + " is out \u2014 wins!", rows, state.players.length === 4, "bigtwoStart", "Play again");
+    }
+    const players = seatRow(g.players, (p) => `<div class="pseat${p.isTurn ? " turn" : ""}${p.isLast ? " leader" : ""}${p.away ? " folded" : ""}"><div class="pseat-top"><span class="pn">${esc(p.name)}${p.me ? " (you)" : ""}</span></div><div class="gfstats">\uD83C\uDCA0 ${p.count}</div></div>`);
+    const cur = g.current ? `<div class="b2current"><div class="b2type">${g.current.type}</div><div class="b2cards">${g.current.cards.map((c) => `<div class="warcard">${cardInner(c, true)}</div>`).join("")}</div></div>` : '<div class="b2current empty">Table is clear \u2014 lead anything</div>';
+    const sel = new Set(multiSel), selectable = g.myTurn;
+    const myHand = g.myHand.map((code) => `<div class="gfcard${sel.has(code) ? " sel" : ""}"${selectable ? ` data-b2pick="${code}"` : ""}>${cardInner(code, true)}</div>`).join("");
+    let action;
+    if (g.myTurn) {
+      const canLead = !g.current;
+      action = `<div class="gfaction"><div class="gflabel">Your turn \u2014 ${g.firstPlay ? "lead, include 3\u2663" : (canLead ? "lead any combo" : "beat it or pass")}</div><div class="actrow"><button class="pbtn call${multiSel.length ? "" : " disabled"}" id="b2play">Play ${multiSel.length || ""}</button>${canLead ? "" : '<button class="pbtn fold" id="b2pass">Pass</button>'}</div></div>`;
+    } else {
+      const t = (g.players.find((p) => p.isTurn) || {}).name;
+      action = `<div class="gfaction idle"><span class="hint">${t ? esc(t) + "\u2026" : ""}</span></div>`;
+    }
+    app.innerHTML = `<div class="table">${gHead()}${players}<div class="felt pokerfelt">${cur}${logBox(g.log)}</div><div class="hand pokerhand"><div class="handlabel">YOUR HAND <span>${g.myHand.length} cards</span></div><div class="gfhand">${myHand}</div>${action}</div></div>`;
+    wireHead();
+    app.querySelectorAll("[data-b2pick]").forEach((el) => el.onclick = () => { const c = el.getAttribute("data-b2pick"); const i = multiSel.indexOf(c); if (i >= 0) multiSel.splice(i, 1); else multiSel.push(c); renderBigTwo(); });
+    const pl = document.getElementById("b2play"); if (pl) pl.onclick = () => { if (!multiSel.length) { toast("Pick cards"); return; } emit("bigtwoPlay", { cards: multiSel.slice() }); multiSel = []; };
+    const ps = document.getElementById("b2pass"); if (ps) ps.onclick = () => emit("bigtwoPass");
+  }
+
+  /* ---------------- Solitaire (Klondike) ---------------- */
+  function renderSolitaire() {
+    const sv = state.solitaire;
+    if (!sv || !sv.started) return startScreen("Solitaire", "Klondike, draw one \u2014 just you.", true, "solStart", "Deal");
+    const b = sv.board;
+    if (!b) { app.innerHTML = `<div class="table">${gHead()}<div class="felt soonfelt"><div class="sooncard"><div class="hint">Dealing\u2026</div></div></div></div>`; wireHead(); return; }
+    if (b.won) return overScreen("You won! \uD83C\uDF89", `<div class="showrow"><span class="sn">Moves</span><span class="shand">${b.moves}</span></div>`, true, "solNew", "New deal");
+    const fnd = ["S", "H", "D", "C"].map((su) => {
+      const c = b.foundations[su], sel = solSel && solSel.zone === "foundation" && solSel.suit === su;
+      return `<div class="solfound ${isRed(su) ? "red" : "black"}${sel ? " sel" : ""}" data-solfsuit="${su}">${c ? cardInner(c, true) : `<span class="solph">${SUIT[su][0]}</span>`}</div>`;
+    }).join("");
+    const wasteSel = solSel && solSel.zone === "waste";
+    const stockWaste = `<div class="solstockwaste"><div class="solpile solstock" id="solstock">${b.stockCount ? '<div class="back"></div>' : '<span class="solph">\u21BB</span>'}<span class="solnum">${b.stockCount}</span></div><div class="solpile solwaste${wasteSel ? " sel" : ""}" id="solwaste">${b.wasteTop ? cardInner(b.wasteTop, true) : '<span class="solph">\u2014</span>'}</div></div>`;
+    const tableau = `<div class="soltableau">` + b.tableau.map((col, i) => {
+      const cards = col.length ? col.map((x, idx) => {
+        if (!x.up) return `<div class="solcard down"><div class="back"></div></div>`;
+        const sel = solSel && solSel.zone === "tableau" && solSel.col === i && solSel.index === idx;
+        return `<div class="solcard up${sel ? " sel" : ""}" data-fc="${i}" data-fi="${idx}">${cardInner(x.card, true)}</div>`;
+      }).join("") : `<div class="solempty">+</div>`;
+      return `<div class="solcol" data-solcol="${i}">${cards}</div>`;
+    }).join("") + `</div>`;
+    const banner = solSel ? `<div class="solbanner">Tap a destination <button class="pbtn fold" id="solcancel">Cancel</button></div>` : `<div class="solbanner hint">Tap a card, then where to move it \u00b7 tap the stock to draw</div>`;
+    app.innerHTML = `<div class="table">${gHead()}
+      <div class="felt solfelt">
+        <div class="soltop"><div class="solfounds">${fnd}</div>${stockWaste}</div>
+        ${tableau}
+      </div>
+      <div class="hand pokerhand"><div class="solbar">${banner}<button class="pbtn" id="solnew">New deal</button></div></div></div>`;
+    wireHead();
+    const emitMove = (from, to) => { emit("solMove", { from, to }); solSel = null; };
+    const stock = document.getElementById("solstock"); if (stock) stock.onclick = () => emit("solDraw");
+    const waste = document.getElementById("solwaste"); if (waste) waste.onclick = () => { if (solSel) { if (solSel.zone === "waste") { solSel = null; renderSolitaire(); } } else if (b.wasteTop) { solSel = { zone: "waste" }; renderSolitaire(); } };
+    app.querySelectorAll("[data-solfsuit]").forEach((el) => el.onclick = () => { const su = el.getAttribute("data-solfsuit"); if (solSel) emitMove(solSel, { zone: "foundation", suit: su }); else if (b.foundations[su]) { solSel = { zone: "foundation", suit: su }; renderSolitaire(); } });
+    app.querySelectorAll(".solcol").forEach((col) => { col.onclick = (e) => { const i = +col.getAttribute("data-solcol"); const cardEl = e.target.closest(".solcard.up"); if (solSel) emitMove(solSel, { zone: "tableau", col: i }); else if (cardEl) { solSel = { zone: "tableau", col: +cardEl.getAttribute("data-fc"), index: +cardEl.getAttribute("data-fi") }; renderSolitaire(); } }; });
+    const cancel = document.getElementById("solcancel"); if (cancel) cancel.onclick = () => { solSel = null; renderSolitaire(); };
+    const nw = document.getElementById("solnew"); if (nw) nw.onclick = () => emit("solNew");
   }
 
   function renderSheet() {

@@ -21,6 +21,14 @@ const { Server } = require("socket.io");
 const poker = require("./poker");
 const gofish = require("./gofish");
 const blackjack = require("./blackjack");
+const war = require("./war");
+const crazy8 = require("./crazy8");
+const cheat = require("./cheat");
+const hearts = require("./hearts");
+const spades = require("./spades");
+const gin = require("./ginrummy");
+const bigtwo = require("./bigtwo");
+const solitaire = require("./solitaire");
 const { mountPWA } = require("./pwa");
 
 const app = express();
@@ -90,6 +98,14 @@ function buildView(lobby, cid) {
     poker: pokerView(lobby, cid),
     gofish: (lobby.mode === "gofish") ? gofishView(lobby, cid) : null,
     blackjack: (lobby.mode === "blackjack") ? bjView(lobby, cid) : null,
+    war: (lobby.mode === "war") ? warView(lobby, cid) : null,
+    c8: (lobby.mode === "crazy8") ? c8View(lobby, cid) : null,
+    cheat: (lobby.mode === "cheat") ? cheatView(lobby, cid) : null,
+    hearts: (lobby.mode === "hearts") ? heartsView(lobby, cid) : null,
+    spades: (lobby.mode === "spades") ? spadesView(lobby, cid) : null,
+    gin: (lobby.mode === "gin") ? ginView(lobby, cid) : null,
+    bigtwo: (lobby.mode === "bigtwo") ? bigtwoView(lobby, cid) : null,
+    solitaire: (lobby.mode === "solitaire") ? solitaireView(lobby, cid) : null,
   };
 }
 function pokerView(lobby, cid) {
@@ -182,6 +198,125 @@ function bjView(lobby, cid) {
     results: bj.phase === "done" ? bj.results : null,
   };
 }
+/* ---- shared helpers for the extra games ---- */
+function pname(lobby, id) { return lobby.players.has(id) ? lobby.players.get(id).name : "?"; }
+function isConn(lobby, id) { const p = lobby.players.get(id); return !!(p && p.connected); }
+const B2_RIDX = { "3": 0, "4": 1, "5": 2, "6": 3, "7": 4, "8": 5, "9": 6, T: 7, J: 8, Q: 9, K: 10, A: 11, "2": 12 };
+const B2_SIDX = { C: 0, D: 1, H: 2, S: 3 };
+function b2sort(a, b) { return (B2_RIDX[a.slice(0, -1)] * 4 + B2_SIDX[a.slice(-1)]) - (B2_RIDX[b.slice(0, -1)] * 4 + B2_SIDX[b.slice(-1)]); }
+
+function warView(lobby, cid) {
+  const w = lobby.war; if (!w) return { on: true, started: false };
+  const lb = w.lastBattle;
+  return {
+    on: true, started: true, phase: w.phase,
+    players: w.order.map((id) => ({ id, name: pname(lobby, id), me: id === cid, count: w.piles[id] ? w.piles[id].length : 0 })),
+    inGame: w.order.includes(cid),
+    lastBattle: lb ? { winner: lb.winner, war: lb.war, a: { id: w.order[0], name: pname(lobby, w.order[0]), cards: lb.a }, b: { id: w.order[1], name: pname(lobby, w.order[1]), cards: lb.b } } : null,
+    log: w.log.slice(-5), winner: w.winner,
+  };
+}
+function c8View(lobby, cid) {
+  const g = lobby.c8; if (!g) return { on: true, started: false };
+  return {
+    on: true, started: true, phase: g.phase,
+    players: g.order.map((id) => ({ id, name: pname(lobby, id), me: id === cid, away: !isConn(lobby, id), count: g.hands[id] ? g.hands[id].length : 0, isTurn: g.turn === id })),
+    top: g.discard[g.discard.length - 1], suit: g.suit, stockCount: g.stock.length,
+    myHand: g.hands[cid] ? g.hands[cid].slice() : [], myTurn: g.turn === cid, inGame: !!g.hands[cid], drew: g.drew,
+    playable: g.hands[cid] ? g.hands[cid].filter((c) => crazy8.playable(g, c)) : [],
+    log: g.log.slice(-5), winner: g.winner,
+  };
+}
+function cheatView(lobby, cid) {
+  const g = lobby.cheat; if (!g) return { on: true, started: false };
+  return {
+    on: true, started: true, phase: g.phase,
+    players: g.order.map((id) => ({ id, name: pname(lobby, id), me: id === cid, away: !isConn(lobby, id), count: g.hands[id] ? g.hands[id].length : 0, isTurn: g.turn === id })),
+    reqRank: cheat.reqRank(g), reqLabel: cheat.rankPlural(cheat.reqRank(g)), pileCount: g.pile.length,
+    lastPlay: g.lastPlay ? { id: g.lastPlay.cid, name: pname(lobby, g.lastPlay.cid), count: g.lastPlay.cards.length, claimLabel: cheat.rankPlural(g.lastPlay.claimRank) } : null,
+    canChallenge: !!g.lastPlay && g.lastPlay.cid !== cid && g.phase === "play",
+    reveal: g.reveal,
+    myHand: g.hands[cid] ? g.hands[cid].slice().sort(cardSort) : [], myTurn: g.turn === cid, inGame: !!g.hands[cid],
+    log: g.log.slice(-5), winner: g.winner,
+  };
+}
+function heartsView(lobby, cid) {
+  const h = lobby.hearts; if (!h) return { on: true, started: false };
+  const myHand = h.hands[cid] ? h.hands[cid].slice().sort(cardSort) : [];
+  const v = {
+    on: true, started: true, phase: h.phase,
+    players: h.order.map((id) => ({ id, name: pname(lobby, id), me: id === cid, away: !isConn(lobby, id), count: h.hands[id] ? h.hands[id].length : 0, score: h.scores[id], isTurn: h.turn === id, isLeader: h.leader === id })),
+    myHand, inGame: !!h.hands[cid], trick: h.trick.map((t) => ({ id: t.cid, name: pname(lobby, t.cid), card: t.card })),
+    heartsBroken: h.heartsBroken, trickNo: h.trickNo, locked: !!h.locked, log: h.log.slice(-5),
+  };
+  if (h.phase === "pass") { v.passDir = ["left", "right", "across", "hold"][h.passDir % 4]; v.iPassed = !!h.pass[cid]; v.legal = myHand; }
+  else if (h.phase === "play") { v.myTurn = h.turn === cid; v.legal = h.turn === cid ? hearts.legalPlays(h, cid) : []; }
+  else if (h.phase === "handover") v.lastHand = h.lastHand;
+  else if (h.phase === "over") v.results = h.results;
+  return v;
+}
+function spadesView(lobby, cid) {
+  const s = lobby.spades; if (!s) return { on: true, started: false };
+  const myHand = s.hands[cid] ? s.hands[cid].slice().sort(cardSort) : [];
+  const v = {
+    on: true, started: true, phase: s.phase,
+    players: s.order.map((id) => ({ id, name: pname(lobby, id), me: id === cid, away: !isConn(lobby, id), count: s.hands[id] ? s.hands[id].length : 0, team: spades.teamOf(s, id), bid: (id in s.bids) ? s.bids[id] : null, tricks: s.tricksWon[id] || 0, isTurn: (s.phase === "bid" ? s.bidTurn : s.turn) === id })),
+    teams: { A: { score: s.scores.A, bags: s.bags.A }, B: { score: s.scores.B, bags: s.bags.B } },
+    myHand, inGame: !!s.hands[cid], trick: s.trick.map((t) => ({ id: t.cid, name: pname(lobby, t.cid), card: t.card })),
+    spadesBroken: s.spadesBroken, trickNo: s.trickNo, locked: !!s.locked, myTeam: spades.teamOf(s, cid), log: s.log.slice(-5),
+  };
+  if (s.phase === "bid") v.myBidTurn = s.bidTurn === cid;
+  else if (s.phase === "play") { v.myTurn = s.turn === cid; v.legal = s.turn === cid ? spades.legalPlays(s, cid) : []; }
+  else if (s.phase === "handover") v.lastHand = s.lastHand;
+  else if (s.phase === "over") v.results = s.results;
+  return v;
+}
+function ginView(lobby, cid) {
+  const g = lobby.gin; if (!g) return { on: true, started: false };
+  const myHand = g.hands[cid] ? g.hands[cid].slice() : [];
+  const bm = g.hands[cid] ? gin.bestMelds(g.hands[cid]) : null;
+  const v = {
+    on: true, started: true, phase: g.phase,
+    players: g.order.map((id) => ({ id, name: pname(lobby, id), me: id === cid, away: !isConn(lobby, id), count: g.hands[id] ? g.hands[id].length : 0, score: g.scores[id], isTurn: g.turn === id })),
+    discardTop: g.discard.length ? g.discard[g.discard.length - 1] : null, stockCount: g.stock.length,
+    myHand, inGame: !!g.hands[cid], myTurn: g.turn === cid,
+    myDeadwood: bm ? bm.deadwoodValue : null, myMelds: bm ? bm.melds : [],
+    canDraw: g.phase === "draw" && g.turn === cid, canDiscard: g.phase === "discard" && g.turn === cid, log: g.log.slice(-5),
+  };
+  if (g.phase === "discard" && g.turn === cid && g.hands[cid].length === 11) {
+    let best = 99; for (const c of g.hands[cid]) { const dw = gin.bestMelds(g.hands[cid].filter((x) => x !== c)).deadwoodValue; if (dw < best) best = dw; }
+    v.knockable = best <= 10; v.bestKnockDw = best;
+  }
+  if (g.phase === "handover") v.lastRound = g.lastRound;
+  if (g.phase === "over") v.results = g.results;
+  return v;
+}
+function bigtwoView(lobby, cid) {
+  const g = lobby.bigtwo; if (!g) return { on: true, started: false };
+  return {
+    on: true, started: true, phase: g.phase,
+    players: g.order.map((id) => ({ id, name: pname(lobby, id), me: id === cid, away: !isConn(lobby, id), count: g.hands[id] ? g.hands[id].length : 0, isTurn: g.turn === id, isLast: g.lastPlayer === id })),
+    current: g.current ? { type: g.current.type, len: g.current.len, cards: g.currentCards } : null,
+    myHand: g.hands[cid] ? g.hands[cid].slice().sort(b2sort) : [], myTurn: g.turn === cid, inGame: !!g.hands[cid], firstPlay: g.firstPlay,
+    log: g.log.slice(-5), winner: g.winner,
+  };
+}
+function solitaireView(lobby, cid) {
+  const s = lobby.solitaire; if (!s) return { on: true, started: false };
+  solitaire.ensureBoard(lobby, cid); const b = s.boards[cid];
+  if (!b) return { on: true, started: true, board: null };
+  return {
+    on: true, started: true,
+    board: {
+      stockCount: b.stock.length, wasteTop: b.waste.length ? b.waste[b.waste.length - 1] : null, wasteCount: b.waste.length,
+      foundations: { S: b.foundations.S.slice(-1)[0] || null, H: b.foundations.H.slice(-1)[0] || null, D: b.foundations.D.slice(-1)[0] || null, C: b.foundations.C.slice(-1)[0] || null },
+      foundationCounts: { S: b.foundations.S.length, H: b.foundations.H.length, D: b.foundations.D.length, C: b.foundations.C.length },
+      tableau: b.tableau.map((col) => col.map((x) => ({ card: x.up ? x.card : null, up: x.up }))),
+      won: b.won, moves: b.moves,
+    },
+  };
+}
+
 function broadcast(lobby) {
   for (const p of lobby.players.values()) {
     if (p.connected && p.sockId) io.to(p.sockId).emit("state", buildView(lobby, p._cid));
@@ -199,12 +334,35 @@ function refundBets(lobby) {
   else if (bj.phase === "playing" || bj.phase === "dealer") { for (const cid of bj.order) { const p = lobby.players.get(cid); if (p && bj.hands[cid]) p.chips += bj.hands[cid].bet; } }
 }
 
+/* clear a mode's state when leaving it (mode switch / teardown) */
+function teardownMode(l, mode) {
+  if (mode === "poker") l.poker = null;
+  else if (mode === "gofish") l.gofish = null;
+  else if (mode === "blackjack") { refundBets(l); l.bj = null; }
+  else if (mode === "war") l.war = null;
+  else if (mode === "crazy8") l.c8 = null;
+  else if (mode === "cheat") l.cheat = null;
+  else if (mode === "hearts") l.hearts = null;
+  else if (mode === "spades") l.spades = null;
+  else if (mode === "gin") l.gin = null;
+  else if (mode === "bigtwo") l.bigtwo = null;
+  else if (mode === "solitaire") l.solitaire = null;
+}
+
 /* remove a player for good (explicit leave, or grace expired): return their cards, drop the seat */
 function purgePlayer(lobby, cid) {
   const p = lobby.players.get(cid);
   if (!p) return;
   if (lobby.mode === "gofish" && lobby.gofish) gofish.removePlayer(lobby, cid);
-  if (lobby.mode === "blackjack" && lobby.bj) blackjack.onLeave(lobby, cid);
+  else if (lobby.mode === "blackjack" && lobby.bj) blackjack.onLeave(lobby, cid);
+  else if (lobby.mode === "war" && lobby.war) war.onLeave(lobby, cid);
+  else if (lobby.mode === "crazy8" && lobby.c8) crazy8.removePlayer(lobby, cid);
+  else if (lobby.mode === "cheat" && lobby.cheat) cheat.removePlayer(lobby, cid);
+  else if (lobby.mode === "hearts" && lobby.hearts) hearts.onLeave(lobby, cid);
+  else if (lobby.mode === "spades" && lobby.spades) spades.onLeave(lobby, cid);
+  else if (lobby.mode === "gin" && lobby.gin) gin.onLeave(lobby, cid);
+  else if (lobby.mode === "bigtwo" && lobby.bigtwo) bigtwo.removePlayer(lobby, cid);
+  else if (lobby.mode === "solitaire" && lobby.solitaire) solitaire.onLeave(lobby, cid);
   lobby.deck.push(...p.hand);
   lobby.players.delete(cid);
   lobby.order = lobby.order.filter((id) => id !== cid);
@@ -328,12 +486,10 @@ io.on("connection", (socket) => {
   socket.on("setMode", act1((l, _p, { mode } = {}) => {
     const m = String(mode || "freeform");
     if (m === l.mode) return;
-    if (l.mode === "poker") l.poker = null; // tear down previous
-    if (l.mode === "gofish") l.gofish = null;
-    if (l.mode === "blackjack") { refundBets(l); l.bj = null; }
+    teardownMode(l, l.mode);
     if (m === "poker") { if (!l.poker || !l.poker.on) l.poker = { on: true, sb: 5, bb: 10, buttonCid: null, hand: null }; }
     if (m === "blackjack") blackjack.startRound(l); // open a betting round
-    l.mode = m;
+    l.mode = m; // war/crazy8/cheat/hearts/spades/gin/bigtwo/solitaire deal on their Start button
   }));
 
   /* ---- Go Fish ---- */
@@ -345,6 +501,51 @@ io.on("connection", (socket) => {
   socket.on("bjBet", act1((l, _p, { amount } = {}) => { if (l.mode === "blackjack" && l.bj) blackjack.placeBet(l, socket.data.cid, parseInt(amount, 10) || 0); }));
   socket.on("bjDeal", act((l) => { if (l.mode === "blackjack" && l.bj) blackjack.deal(l); }));
   socket.on("bjAction", act1((l, _p, { action } = {}) => { if (l.mode === "blackjack" && l.bj) blackjack.action(l, socket.data.cid, action); }));
+
+  /* ---- War ---- */
+  socket.on("warStart", act((l) => { if (l.mode === "war") war.startGame(l); }));
+  socket.on("warFlip", act((l) => { if (l.mode === "war" && l.war) war.flip(l, socket.data.cid); }));
+
+  /* ---- Crazy Eights ---- */
+  socket.on("c8Start", act((l) => { if (l.mode === "crazy8") crazy8.startGame(l); }));
+  socket.on("c8Play", act1((l, _p, { card, suit } = {}) => { if (l.mode === "crazy8" && l.c8) crazy8.play(l, socket.data.cid, card, suit); }));
+  socket.on("c8Draw", act((l) => { if (l.mode === "crazy8" && l.c8) crazy8.draw(l, socket.data.cid); }));
+  socket.on("c8Pass", act((l) => { if (l.mode === "crazy8" && l.c8) crazy8.pass(l, socket.data.cid); }));
+
+  /* ---- Cheat ---- */
+  socket.on("cheatStart", act((l) => { if (l.mode === "cheat") cheat.startGame(l); }));
+  socket.on("cheatPlay", act1((l, _p, { cards } = {}) => { if (l.mode === "cheat" && l.cheat) cheat.play(l, socket.data.cid, cards); }));
+  socket.on("cheatChallenge", act((l) => { if (l.mode === "cheat" && l.cheat) cheat.challenge(l, socket.data.cid); }));
+
+  /* ---- Hearts ---- */
+  socket.on("heartsStart", act((l) => { if (l.mode === "hearts") hearts.startGame(l); }));
+  socket.on("heartsPass", act1((l, _p, { cards } = {}) => { if (l.mode === "hearts" && l.hearts) hearts.selectPass(l, socket.data.cid, cards); }));
+  socket.on("heartsPlay", act1((l, _p, { card } = {}) => { if (l.mode === "hearts" && l.hearts) hearts.playCard(l, socket.data.cid, card); }));
+  socket.on("heartsNext", act((l) => { if (l.mode === "hearts" && l.hearts) hearts.nextHand(l); }));
+
+  /* ---- Spades ---- */
+  socket.on("spadesStart", act((l) => { if (l.mode === "spades") spades.startGame(l); }));
+  socket.on("spadesBid", act1((l, _p, { n } = {}) => { if (l.mode === "spades" && l.spades) spades.bid(l, socket.data.cid, n); }));
+  socket.on("spadesPlay", act1((l, _p, { card } = {}) => { if (l.mode === "spades" && l.spades) spades.playCard(l, socket.data.cid, card); }));
+  socket.on("spadesNext", act((l) => { if (l.mode === "spades" && l.spades) spades.nextHand(l); }));
+
+  /* ---- Gin Rummy ---- */
+  socket.on("ginStart", act((l) => { if (l.mode === "gin") gin.startGame(l); }));
+  socket.on("ginDrawStock", act((l) => { if (l.mode === "gin" && l.gin) gin.drawStock(l, socket.data.cid); }));
+  socket.on("ginDrawDiscard", act((l) => { if (l.mode === "gin" && l.gin) gin.drawDiscard(l, socket.data.cid); }));
+  socket.on("ginDiscard", act1((l, _p, { card, knock } = {}) => { if (l.mode === "gin" && l.gin) gin.discard(l, socket.data.cid, card, !!knock); }));
+  socket.on("ginNext", act((l) => { if (l.mode === "gin" && l.gin) gin.nextHand(l); }));
+
+  /* ---- Big Two ---- */
+  socket.on("bigtwoStart", act((l) => { if (l.mode === "bigtwo") bigtwo.startGame(l); }));
+  socket.on("bigtwoPlay", act1((l, _p, { cards } = {}) => { if (l.mode === "bigtwo" && l.bigtwo) bigtwo.play(l, socket.data.cid, cards); }));
+  socket.on("bigtwoPass", act((l) => { if (l.mode === "bigtwo" && l.bigtwo) bigtwo.pass(l, socket.data.cid); }));
+
+  /* ---- Solitaire ---- */
+  socket.on("solStart", act((l) => { if (l.mode === "solitaire") solitaire.startGame(l); }));
+  socket.on("solNew", act((l) => { if (l.mode === "solitaire" && l.solitaire) solitaire.newBoard(l, socket.data.cid); }));
+  socket.on("solDraw", act((l) => { if (l.mode === "solitaire" && l.solitaire) solitaire.draw(l, socket.data.cid); }));
+  socket.on("solMove", act1((l, _p, { from, to } = {}) => { if (l.mode === "solitaire" && l.solitaire) solitaire.move(l, socket.data.cid, from, to); }));
 
   /* chips work across chip games (poker, blackjack) */
   socket.on("addChips", act1((l, p, { amount, pid } = {}) => {
@@ -409,7 +610,10 @@ io.on("connection", (socket) => {
     p.connected = false; p.sockId = null;
     if (lobby.poker && lobby.poker.hand) poker.foldOnLeave(lobby, cid); // don't stall the table mid-hand
     if (lobby.mode === "gofish" && lobby.gofish) gofish.skipTurn(lobby, cid);
-    if (lobby.mode === "blackjack" && lobby.bj) blackjack.onLeave(lobby, cid);
+    else if (lobby.mode === "blackjack" && lobby.bj) blackjack.onLeave(lobby, cid);
+    else if (lobby.mode === "crazy8" && lobby.c8) crazy8.skipTurn(lobby, cid);
+    else if (lobby.mode === "cheat" && lobby.cheat) cheat.skipTurn(lobby, cid);
+    else if (lobby.mode === "bigtwo" && lobby.bigtwo) bigtwo.skipTurn(lobby, cid);
     broadcast(lobby);
     setTimeout(() => {
       const lb = lobbies.get(lobby.code);
